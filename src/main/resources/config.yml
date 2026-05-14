@@ -1,0 +1,8 @@
+# Tokens awarded per player kill
+kill-reward: 1
+# Tokens required to cash out
+cash-tokens: 10
+# Money deposited per cash-out
+cash-amount: 100.0
+# Display name of the physical token item (supports & color codes)
+token-item-name: "&6Kill Token"
