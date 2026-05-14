@@ -16,7 +16,7 @@ public class KillTokensPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        storage = new YamlTokenStorage(getDataFolder());
+        storage = new YamlTokenStorage(getDataFolder(), getLogger());
 
         if (!hookVault()) {
             getLogger().severe("Vault not found or no economy provider registered. Disabling KillTokens.");

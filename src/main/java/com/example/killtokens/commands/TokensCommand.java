@@ -65,7 +65,7 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(MessageUtil.color("&6&l  KillTokens Balance"));
         player.sendMessage(MessageUtil.color("&8&l===================="));
         player.sendMessage(MessageUtil.color("&7  Kill Tokens: &a" + tokens));
-        player.sendMessage(MessageUtil.color("&7  Cash Out: &e" + cashTokens + " tokens &7→ &a$" + cashAmount));
+        player.sendMessage(MessageUtil.color("&7  Cash Out: &e" + cashTokens + " tokens &7→ &a$" + String.format("%.2f", cashAmount)));
         player.sendMessage(MessageUtil.color("&8&l===================="));
         return true;
     }
@@ -78,6 +78,10 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
 
         int amount = parsePositiveInt(player, args[1]);
         if (amount < 0) return true;
+        if (amount > 64) {
+            player.sendMessage(MessageUtil.color("&cYou can only withdraw up to 64 tokens at a time."));
+            return true;
+        }
 
         int balance = plugin.getStorage().getTokens(player.getUniqueId());
         if (balance < amount) {
@@ -127,7 +131,7 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         plugin.getStorage().setTokens(player.getUniqueId(), balance - cashTokens);
         economy.depositPlayer(player, cashAmount);
         player.sendMessage(MessageUtil.color(
-            "&aCashed out &e" + cashTokens + " &atokens for &a$" + cashAmount + "&a!"));
+            "&aCashed out &e" + cashTokens + " &atokens for &a$" + String.format("%.2f", cashAmount) + "&a!"));
         return true;
     }
 
@@ -141,7 +145,7 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        int amount = parsePositiveInt(player, args[2]);
+        int amount = parseNonNegativeInt(player, args[2]);
         if (amount < 0) return true;
 
         OfflinePlayer target = resolveOfflinePlayer(args[1]);
@@ -218,6 +222,16 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
 
     /** Returns -1 (sentinel) and sends an error if parsing fails or amount <= 0. */
     private static int parsePositiveInt(Player player, String arg) {
+        int amount = parseNonNegativeInt(player, arg);
+        if (amount == 0) {
+            player.sendMessage(MessageUtil.color("&cAmount must be a positive number."));
+            return -1;
+        }
+        return amount;
+    }
+
+    /** Returns -1 (sentinel) and sends an error if parsing fails or amount < 0. */
+    private static int parseNonNegativeInt(Player player, String arg) {
         int amount;
         try {
             amount = Integer.parseInt(arg);
@@ -225,8 +239,8 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
             player.sendMessage(MessageUtil.color("&cInvalid amount. Please enter a whole number."));
             return -1;
         }
-        if (amount <= 0) {
-            player.sendMessage(MessageUtil.color("&cAmount must be a positive number."));
+        if (amount < 0) {
+            player.sendMessage(MessageUtil.color("&cAmount cannot be negative."));
             return -1;
         }
         return amount;
