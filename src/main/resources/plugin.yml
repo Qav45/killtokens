@@ -1,0 +1,19 @@
+name: KillTokens
+version: 1.0.0
+main: com.example.killtokens.KillTokensPlugin
+api-version: 1.20
+description: Earn tokens for kills and exchange them for currency.
+
+commands:
+  tokens:
+    description: Manage your kill tokens.
+    usage: /<command> <balance|withdraw|cashout|set|add|remove>
+    permission: killtokens.use
+
+permissions:
+  killtokens.use:
+    description: Allows players to use basic token commands.
+    default: true
+  killtokens.admin:
+    description: Allows administrators to set, add, and remove tokens for other players.
+    default: op
