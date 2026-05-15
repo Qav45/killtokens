@@ -6,3 +6,5 @@ cash-tokens: 10
 cash-amount: 100.0
 # Display name of the physical token item (supports & color codes)
 token-item-name: "&6Kill Token"
+# Title of the /tokens GUI (supports & color codes)
+gui-title: "&8&lKill Tokens"
