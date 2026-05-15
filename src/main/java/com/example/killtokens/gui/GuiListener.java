@@ -35,7 +35,7 @@ public class GuiListener implements Listener {
 
         Player player = (Player) event.getWhoClicked();
         int slot = event.getRawSlot();
-        if (slot < 0 || slot >= 27) return;
+        if (slot < 0 || slot >= 45) return;
 
         // Dupe protection: one operation at a time per player
         if (!plugin.tryLock(player.getUniqueId())) {
