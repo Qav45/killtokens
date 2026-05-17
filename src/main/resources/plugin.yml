@@ -28,3 +28,6 @@ permissions:
   killtokens.refined.admin:
     description: Admin overrides for refined ore.
     default: op
+  killtokens.alerts:
+    description: Receives dupe protection flag warnings.
+    default: op
