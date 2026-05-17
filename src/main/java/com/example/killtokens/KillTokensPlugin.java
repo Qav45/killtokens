@@ -1,10 +1,14 @@
 package com.example.killtokens;
 
+import com.example.killtokens.commands.RefinedCommand;
 import com.example.killtokens.commands.TokensCommand;
 import com.example.killtokens.gui.GuiListener;
 import com.example.killtokens.gui.TokensGui;
 import com.example.killtokens.listeners.PlayerDeathListener;
-import com.example.killtokens.placeholders.KillTokensExpansion;
+import com.example.killtokens.placeholders.RefinedPAPIExpansion;
+import com.example.killtokens.refined.RefinedOreListener;
+import com.example.killtokens.refined.RefinedOreStorage;
+import com.example.killtokens.refined.YamlRefinedOreStorage;
 import com.example.killtokens.storage.TokenStorage;
 import com.example.killtokens.storage.YamlTokenStorage;
 import net.milkbowl.vault.economy.Economy;
@@ -18,6 +22,7 @@ import java.util.UUID;
 public class KillTokensPlugin extends JavaPlugin {
 
     private TokenStorage storage;
+    private RefinedOreStorage refinedStorage;
     private Economy economy;
     private TokensGui tokensGui;
 
@@ -28,6 +33,7 @@ public class KillTokensPlugin extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         storage = new YamlTokenStorage(getDataFolder(), getLogger());
+        refinedStorage = new YamlRefinedOreStorage(getDataFolder(), getLogger());
 
         if (!hookVault()) {
             getLogger().severe("Vault not found or no economy provider registered. Disabling KillTokens.");
@@ -38,15 +44,20 @@ public class KillTokensPlugin extends JavaPlugin {
         tokensGui = new TokensGui(this);
 
         getServer().getPluginManager().registerEvents(new PlayerDeathListener(this), this);
+        getServer().getPluginManager().registerEvents(new RefinedOreListener(this), this);
         getServer().getPluginManager().registerEvents(new GuiListener(this, tokensGui), this);
 
-        TokensCommand executor = new TokensCommand(this);
-        getCommand("tokens").setExecutor(executor);
-        getCommand("tokens").setTabCompleter(executor);
+        TokensCommand tokensCommand = new TokensCommand(this);
+        getCommand("tokens").setExecutor(tokensCommand);
+        getCommand("tokens").setTabCompleter(tokensCommand);
+
+        RefinedCommand refinedCommand = new RefinedCommand(this);
+        getCommand("refined").setExecutor(refinedCommand);
+        getCommand("refined").setTabCompleter(refinedCommand);
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            new KillTokensExpansion(this).register();
-            getLogger().info("PlaceholderAPI found — placeholders registered.");
+            new RefinedPAPIExpansion(this).register();
+            getLogger().info("PlaceholderAPI found - placeholders registered.");
         }
     }
 
@@ -54,6 +65,9 @@ public class KillTokensPlugin extends JavaPlugin {
     public void onDisable() {
         if (storage != null) {
             storage.flush();
+        }
+        if (refinedStorage != null) {
+            refinedStorage.flush();
         }
     }
 
@@ -68,6 +82,10 @@ public class KillTokensPlugin extends JavaPlugin {
 
     public TokenStorage getStorage() {
         return storage;
+    }
+
+    public RefinedOreStorage getRefinedStorage() {
+        return refinedStorage;
     }
 
     public Economy getEconomy() {

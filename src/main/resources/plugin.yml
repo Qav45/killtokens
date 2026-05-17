@@ -10,6 +10,10 @@ commands:
     description: Manage your kill tokens.
     usage: /<command> [gui|balance|withdraw|cashout|set|add|remove]
     permission: killtokens.use
+  refined:
+    description: Manage your Refined Ore storage.
+    usage: /refined <balance|storage|store|withdraw>
+    permission: killtokens.refined
 
 permissions:
   killtokens.use:
@@ -17,4 +21,10 @@ permissions:
     default: true
   killtokens.admin:
     description: Allows administrators to set, add, and remove tokens for other players.
+    default: op
+  killtokens.refined:
+    description: Allows players to use /refined commands.
+    default: true
+  killtokens.refined.admin:
+    description: Admin overrides for refined ore.
     default: op
