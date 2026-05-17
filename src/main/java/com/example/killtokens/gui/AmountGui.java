@@ -40,8 +40,8 @@ public class AmountGui {
     public void open(Player player, Type type, int max) {
         Inventory inv = Bukkit.createInventory(null, SIZE, titleFor(type));
 
-        ItemStack border = pane(Material.PURPLE_STAINED_GLASS_PANE);
-        ItemStack fill = pane(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
+        ItemStack border = pane(Material.ORANGE_STAINED_GLASS_PANE);
+        ItemStack fill = pane(Material.LIME_STAINED_GLASS_PANE);
         for (int i = 0; i < SIZE; i++) inv.setItem(i, fill);
         for (int i = 0; i < 9; i++) inv.setItem(i, border);
         for (int i = 18; i < 27; i++) inv.setItem(i, border);
