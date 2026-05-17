@@ -3,6 +3,7 @@ package com.example.killtokens.commands;
 import com.example.killtokens.KillTokensPlugin;
 import com.example.killtokens.util.MessageUtil;
 import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -39,11 +40,12 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         Player player = (Player) sender;
 
         if (args.length == 0) {
-            sendUsage(player);
+            plugin.getTokensGui().open(player);
             return true;
         }
 
         switch (args[0].toLowerCase()) {
+            case "gui":      plugin.getTokensGui().open(player); return true;
             case "balance":  return handleBalance(player);
             case "withdraw": return handleWithdraw(player, args);
             case "cashout":  return handleCashout(player);
@@ -65,7 +67,7 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(MessageUtil.color("&6&l  KillTokens Balance"));
         player.sendMessage(MessageUtil.color("&8&l===================="));
         player.sendMessage(MessageUtil.color("&7  Kill Tokens: &a" + tokens));
-        player.sendMessage(MessageUtil.color("&7  Cash Out: &e" + cashTokens + " tokens &7→ &a$" + cashAmount));
+        player.sendMessage(MessageUtil.color("&7  Cash Out: &e" + cashTokens + " tokens &7→ &a$" + String.format("%.2f", cashAmount)));
         player.sendMessage(MessageUtil.color("&8&l===================="));
         return true;
     }
@@ -78,31 +80,47 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
 
         int amount = parsePositiveInt(player, args[1]);
         if (amount < 0) return true;
-
-        int balance = plugin.getStorage().getTokens(player.getUniqueId());
-        if (balance < amount) {
-            player.sendMessage(MessageUtil.color("&cInsufficient tokens. You have &e" + balance + " &ctokens."));
+        if (amount > 64) {
+            player.sendMessage(MessageUtil.color("&cYou can only withdraw up to 64 tokens at a time."));
             return true;
         }
 
-        plugin.getStorage().setTokens(player.getUniqueId(), balance - amount);
+        if (!plugin.getDupeProtection().begin(player, "tokens-withdraw")) {
+            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
+            return true;
+        }
 
-        String itemName = plugin.getConfig().getString("token-item-name", "&6Kill Token");
-        ItemStack tokenItem = new ItemStack(Material.GOLD_NUGGET, amount);
-        ItemMeta meta = tokenItem.getItemMeta();
-        meta.setDisplayName(MessageUtil.color(itemName));
-        meta.setLore(Arrays.asList(
-            MessageUtil.color("&7Earned through honorable combat"),
-            MessageUtil.color("&7Use &e/tokens cashout &7to exchange for money")
-        ));
-        tokenItem.setItemMeta(meta);
+        try {
+            int balance = plugin.getStorage().getTokens(player.getUniqueId());
+            if (balance < amount) {
+                player.sendMessage(MessageUtil.color("&cInsufficient tokens. You have &e" + balance + " &ctokens."));
+                return true;
+            }
 
-        Map<Integer, ItemStack> leftover = player.getInventory().addItem(tokenItem);
-        if (!leftover.isEmpty()) {
-            leftover.values().forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
-            player.sendMessage(MessageUtil.color("&eInventory full! Excess tokens dropped at your location."));
-        } else {
-            player.sendMessage(MessageUtil.color("&aWithdrawn &e" + amount + " &atokens to your inventory."));
+            String itemName = plugin.getConfig().getString("token-item-name", "&6Kill Token");
+            ItemStack tokenItem = new ItemStack(Material.GOLD_NUGGET, amount);
+            ItemMeta meta = tokenItem.getItemMeta();
+            meta.setDisplayName(MessageUtil.color(itemName));
+            meta.setLore(Arrays.asList(
+                MessageUtil.color("&7Earned through honorable combat"),
+                MessageUtil.color("&7Use &e/tokens cashout &7to exchange for money")
+            ));
+            tokenItem.setItemMeta(meta);
+
+            // Deduct before giving to prevent dupe on crash
+            plugin.getStorage().setTokens(player.getUniqueId(), balance - amount);
+            plugin.getStorage().flush();
+
+            Map<Integer, ItemStack> leftover = player.getInventory().addItem(tokenItem);
+            if (!leftover.isEmpty()) {
+                plugin.getDupeProtection().flag(player, "tokens-withdraw", "Inventory overflow while withdrawing tokens");
+                leftover.values().forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
+                player.sendMessage(MessageUtil.color("&eInventory full! Excess tokens dropped at your location."));
+            } else {
+                player.sendMessage(MessageUtil.color("&aWithdrawn &e" + amount + " &atokens to your inventory."));
+            }
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
         }
         return true;
     }
@@ -114,20 +132,38 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        int cashTokens = plugin.getConfig().getInt("cash-tokens");
-        double cashAmount = plugin.getConfig().getDouble("cash-amount");
-        int balance = plugin.getStorage().getTokens(player.getUniqueId());
-
-        if (balance < cashTokens) {
-            player.sendMessage(MessageUtil.color(
-                "&cYou need &e" + cashTokens + " &ctokens to cash out. You have &e" + balance + "&c."));
+        if (!plugin.getDupeProtection().begin(player, "tokens-cashout")) {
+            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
             return true;
         }
 
-        plugin.getStorage().setTokens(player.getUniqueId(), balance - cashTokens);
-        economy.depositPlayer(player, cashAmount);
-        player.sendMessage(MessageUtil.color(
-            "&aCashed out &e" + cashTokens + " &atokens for &a$" + cashAmount + "&a!"));
+        try {
+            int cashTokens = plugin.getConfig().getInt("cash-tokens");
+            double cashAmount = plugin.getConfig().getDouble("cash-amount");
+            int balance = plugin.getStorage().getTokens(player.getUniqueId());
+
+            if (balance < cashTokens) {
+                player.sendMessage(MessageUtil.color(
+                    "&cYou need &e" + cashTokens + " &ctokens to cash out. You have &e" + balance + "&c."));
+                return true;
+            }
+
+            // Deduct before depositing to prevent dupe on crash
+            plugin.getStorage().setTokens(player.getUniqueId(), balance - cashTokens);
+            plugin.getStorage().flush();
+            EconomyResponse response = economy.depositPlayer(player, cashAmount);
+            if (!response.transactionSuccess()) {
+                plugin.getStorage().setTokens(player.getUniqueId(), balance);
+                plugin.getStorage().flush();
+                plugin.getDupeProtection().flag(player, "tokens-cashout", "Vault deposit failed after token deduction; balance refunded");
+                player.sendMessage(MessageUtil.color("&cCashout failed. Your tokens were refunded."));
+                return true;
+            }
+            player.sendMessage(MessageUtil.color(
+                "&aCashed out &e" + cashTokens + " &atokens for &a$" + String.format("%.2f", cashAmount) + "&a!"));
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
+        }
         return true;
     }
 
@@ -141,13 +177,22 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        int amount = parsePositiveInt(player, args[2]);
+        int amount = parseNonNegativeInt(player, args[2]);
         if (amount < 0) return true;
 
+        if (!plugin.getDupeProtection().begin(player, "tokens-admin-set")) {
+            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
+            return true;
+        }
+        try {
         OfflinePlayer target = resolveOfflinePlayer(args[1]);
         plugin.getStorage().setTokens(target.getUniqueId(), amount);
+        plugin.getStorage().flush();
         player.sendMessage(MessageUtil.color("&aSet &e" + args[1] + "&a's tokens to &e" + amount + "&a."));
         return true;
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
+        }
     }
 
     private boolean handleAdd(Player player, String[] args) {
@@ -163,10 +208,19 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         int amount = parsePositiveInt(player, args[2]);
         if (amount < 0) return true;
 
+        if (!plugin.getDupeProtection().begin(player, "tokens-admin-add")) {
+            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
+            return true;
+        }
+        try {
         OfflinePlayer target = resolveOfflinePlayer(args[1]);
         plugin.getStorage().addTokens(target.getUniqueId(), amount);
+        plugin.getStorage().flush();
         player.sendMessage(MessageUtil.color("&aAdded &e" + amount + " &atokens to &e" + args[1] + "&a."));
         return true;
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
+        }
     }
 
     private boolean handleRemove(Player player, String[] args) {
@@ -182,11 +236,20 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         int amount = parsePositiveInt(player, args[2]);
         if (amount < 0) return true;
 
+        if (!plugin.getDupeProtection().begin(player, "tokens-admin-remove")) {
+            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
+            return true;
+        }
+        try {
         OfflinePlayer target = resolveOfflinePlayer(args[1]);
         int current = plugin.getStorage().getTokens(target.getUniqueId());
-        plugin.getStorage().setTokens(target.getUniqueId(), current - amount);
+        plugin.getStorage().setTokens(target.getUniqueId(), Math.max(0, current - amount));
+        plugin.getStorage().flush();
         player.sendMessage(MessageUtil.color("&aRemoved &e" + amount + " &atokens from &e" + args[1] + "&a."));
         return true;
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
+        }
     }
 
     @Override
@@ -194,7 +257,7 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player)) return Collections.emptyList();
 
         if (args.length == 1) {
-            List<String> subs = new ArrayList<>(Arrays.asList("balance", "withdraw", "cashout"));
+            List<String> subs = new ArrayList<>(Arrays.asList("gui", "balance", "withdraw", "cashout"));
             if (sender.hasPermission("killtokens.admin")) {
                 subs.addAll(Arrays.asList("set", "add", "remove"));
             }
@@ -216,8 +279,16 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         return Collections.emptyList();
     }
 
-    /** Returns -1 (sentinel) and sends an error if parsing fails or amount <= 0. */
     private static int parsePositiveInt(Player player, String arg) {
+        int amount = parseNonNegativeInt(player, arg);
+        if (amount == 0) {
+            player.sendMessage(MessageUtil.color("&cAmount must be a positive number."));
+            return -1;
+        }
+        return amount;
+    }
+
+    private static int parseNonNegativeInt(Player player, String arg) {
         int amount;
         try {
             amount = Integer.parseInt(arg);
@@ -225,8 +296,8 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
             player.sendMessage(MessageUtil.color("&cInvalid amount. Please enter a whole number."));
             return -1;
         }
-        if (amount <= 0) {
-            player.sendMessage(MessageUtil.color("&cAmount must be a positive number."));
+        if (amount < 0) {
+            player.sendMessage(MessageUtil.color("&cAmount cannot be negative."));
             return -1;
         }
         return amount;
@@ -242,6 +313,6 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendUsage(Player player) {
-        player.sendMessage(MessageUtil.color("&6Usage: /tokens <balance|withdraw|cashout|set|add|remove>"));
+        player.sendMessage(MessageUtil.color("&6Usage: /tokens <gui|balance|withdraw|cashout|set|add|remove>"));
     }
 }

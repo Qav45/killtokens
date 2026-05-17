@@ -5,13 +5,16 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 public class YamlTokenStorage implements TokenStorage {
 
     private final File file;
     private final YamlConfiguration config;
+    private final Logger logger;
 
-    public YamlTokenStorage(File dataFolder) {
+    public YamlTokenStorage(File dataFolder, Logger logger) {
+        this.logger = logger;
         this.file = new File(dataFolder, "tokens.yml");
         dataFolder.mkdirs();
         if (!file.exists()) {
@@ -44,7 +47,7 @@ public class YamlTokenStorage implements TokenStorage {
         try {
             config.save(file);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to save tokens.yml: " + e.getMessage(), e);
+            logger.severe("Failed to save tokens.yml: " + e.getMessage());
         }
     }
 }

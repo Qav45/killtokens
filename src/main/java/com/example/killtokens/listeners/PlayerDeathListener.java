@@ -22,7 +22,6 @@ public class PlayerDeathListener implements Listener {
         Player killer = victim.getKiller();
 
         if (killer == null) return;
-        if (!(killer instanceof Player)) return;
         if (killer.getUniqueId().equals(victim.getUniqueId())) return;
 
         int reward = plugin.getConfig().getInt("kill-reward", 1);

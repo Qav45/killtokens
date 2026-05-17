@@ -6,7 +6,10 @@ import org.junit.Test;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.UUID;
+import java.util.logging.Logger;
 
 import static org.junit.Assert.assertEquals;
 
@@ -18,13 +21,15 @@ public class YamlTokenStorageTest {
     @Before
     public void setUp() throws Exception {
         tempDir = Files.createTempDirectory("killtokens-test").toFile();
-        storage = new YamlTokenStorage(tempDir);
+        storage = new YamlTokenStorage(tempDir, Logger.getLogger("test"));
     }
 
     @After
-    public void tearDown() {
-        new File(tempDir, "tokens.yml").delete();
-        tempDir.delete();
+    public void tearDown() throws Exception {
+        Files.walk(tempDir.toPath())
+            .sorted(Comparator.reverseOrder())
+            .map(Path::toFile)
+            .forEach(File::delete);
     }
 
     @Test
@@ -60,7 +65,7 @@ public class YamlTokenStorageTest {
         storage.setTokens(uuid, 42);
         storage.flush();
 
-        YamlTokenStorage reloaded = new YamlTokenStorage(tempDir);
+        YamlTokenStorage reloaded = new YamlTokenStorage(tempDir, Logger.getLogger("test"));
         assertEquals(42, reloaded.getTokens(uuid));
     }
 }

@@ -1,14 +1,19 @@
 name: KillTokens
-version: 1.0.0
+version: 1.1.0
 main: com.example.killtokens.KillTokensPlugin
 api-version: 1.20
 description: Earn tokens for kills and exchange them for currency.
+softdepend: [Vault, PlaceholderAPI]
 
 commands:
   tokens:
     description: Manage your kill tokens.
-    usage: /<command> <balance|withdraw|cashout|set|add|remove>
+    usage: /<command> [gui|balance|withdraw|cashout|set|add|remove]
     permission: killtokens.use
+  refined:
+    description: Manage your Refined Ore storage.
+    usage: /refined <balance|storage|store|withdraw>
+    permission: killtokens.refined
 
 permissions:
   killtokens.use:
@@ -16,4 +21,13 @@ permissions:
     default: true
   killtokens.admin:
     description: Allows administrators to set, add, and remove tokens for other players.
+    default: op
+  killtokens.refined:
+    description: Allows players to use /refined commands.
+    default: true
+  killtokens.refined.admin:
+    description: Admin overrides for refined ore.
+    default: op
+  killtokens.alerts:
+    description: Receives dupe protection flag warnings.
     default: op
