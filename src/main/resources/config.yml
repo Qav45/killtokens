@@ -8,3 +8,18 @@ cash-amount: 100.0
 token-item-name: "&6Kill Token"
 # Title of the /tokens GUI (supports & color codes)
 gui-title: "&8&lKill Tokens"
+
+# Refined Ore System
+refined:
+  # denominator (1/85 base)
+  ore-chance: 85
+  # guaranteed after this many misses
+  ore-pity: 100
+  # denominator (1/3500 base)
+  compressed-chance: 3500
+  # guaranteed after this many misses
+  compressed-pity: 5000
+  broadcast-drops: true
+  skip-silk-touch: true
+  refined-item: BLUE_DYE
+  compressed-item: NAUTILUS_SHELL
