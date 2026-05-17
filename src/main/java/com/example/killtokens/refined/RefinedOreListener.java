@@ -122,6 +122,7 @@ public class RefinedOreListener implements Listener {
     private void giveItems(Player player, ItemStack item) {
         Map<Integer, ItemStack> leftover = player.getInventory().addItem(item);
         if (!leftover.isEmpty()) {
+            plugin.getDupeProtection().flag(player, "refined-mining-drop", "Inventory overflow while receiving mined refined drop");
             leftover.values().forEach(extra -> player.getWorld().dropItemNaturally(player.getLocation(), extra));
             player.sendMessage(MessageUtil.color("&eInventory full! Excess refined drops fell at your location."));
         }

@@ -3,6 +3,7 @@ package com.example.killtokens.commands;
 import com.example.killtokens.KillTokensPlugin;
 import com.example.killtokens.util.MessageUtil;
 import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
@@ -84,7 +85,7 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (!plugin.tryLock(player.getUniqueId())) {
+        if (!plugin.getDupeProtection().begin(player, "tokens-withdraw")) {
             player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
             return true;
         }
@@ -112,13 +113,14 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
 
             Map<Integer, ItemStack> leftover = player.getInventory().addItem(tokenItem);
             if (!leftover.isEmpty()) {
+                plugin.getDupeProtection().flag(player, "tokens-withdraw", "Inventory overflow while withdrawing tokens");
                 leftover.values().forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
                 player.sendMessage(MessageUtil.color("&eInventory full! Excess tokens dropped at your location."));
             } else {
                 player.sendMessage(MessageUtil.color("&aWithdrawn &e" + amount + " &atokens to your inventory."));
             }
         } finally {
-            plugin.unlock(player.getUniqueId());
+            plugin.getDupeProtection().end(player.getUniqueId());
         }
         return true;
     }
@@ -130,7 +132,7 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (!plugin.tryLock(player.getUniqueId())) {
+        if (!plugin.getDupeProtection().begin(player, "tokens-cashout")) {
             player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
             return true;
         }
@@ -149,11 +151,18 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
             // Deduct before depositing to prevent dupe on crash
             plugin.getStorage().setTokens(player.getUniqueId(), balance - cashTokens);
             plugin.getStorage().flush();
-            economy.depositPlayer(player, cashAmount);
+            EconomyResponse response = economy.depositPlayer(player, cashAmount);
+            if (!response.transactionSuccess()) {
+                plugin.getStorage().setTokens(player.getUniqueId(), balance);
+                plugin.getStorage().flush();
+                plugin.getDupeProtection().flag(player, "tokens-cashout", "Vault deposit failed after token deduction; balance refunded");
+                player.sendMessage(MessageUtil.color("&cCashout failed. Your tokens were refunded."));
+                return true;
+            }
             player.sendMessage(MessageUtil.color(
                 "&aCashed out &e" + cashTokens + " &atokens for &a$" + String.format("%.2f", cashAmount) + "&a!"));
         } finally {
-            plugin.unlock(player.getUniqueId());
+            plugin.getDupeProtection().end(player.getUniqueId());
         }
         return true;
     }
@@ -171,11 +180,19 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         int amount = parseNonNegativeInt(player, args[2]);
         if (amount < 0) return true;
 
+        if (!plugin.getDupeProtection().begin(player, "tokens-admin-set")) {
+            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
+            return true;
+        }
+        try {
         OfflinePlayer target = resolveOfflinePlayer(args[1]);
         plugin.getStorage().setTokens(target.getUniqueId(), amount);
         plugin.getStorage().flush();
         player.sendMessage(MessageUtil.color("&aSet &e" + args[1] + "&a's tokens to &e" + amount + "&a."));
         return true;
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
+        }
     }
 
     private boolean handleAdd(Player player, String[] args) {
@@ -191,11 +208,19 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         int amount = parsePositiveInt(player, args[2]);
         if (amount < 0) return true;
 
+        if (!plugin.getDupeProtection().begin(player, "tokens-admin-add")) {
+            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
+            return true;
+        }
+        try {
         OfflinePlayer target = resolveOfflinePlayer(args[1]);
         plugin.getStorage().addTokens(target.getUniqueId(), amount);
         plugin.getStorage().flush();
         player.sendMessage(MessageUtil.color("&aAdded &e" + amount + " &atokens to &e" + args[1] + "&a."));
         return true;
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
+        }
     }
 
     private boolean handleRemove(Player player, String[] args) {
@@ -211,12 +236,20 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         int amount = parsePositiveInt(player, args[2]);
         if (amount < 0) return true;
 
+        if (!plugin.getDupeProtection().begin(player, "tokens-admin-remove")) {
+            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
+            return true;
+        }
+        try {
         OfflinePlayer target = resolveOfflinePlayer(args[1]);
         int current = plugin.getStorage().getTokens(target.getUniqueId());
         plugin.getStorage().setTokens(target.getUniqueId(), Math.max(0, current - amount));
         plugin.getStorage().flush();
         player.sendMessage(MessageUtil.color("&aRemoved &e" + amount + " &atokens from &e" + args[1] + "&a."));
         return true;
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
+        }
     }
 
     @Override

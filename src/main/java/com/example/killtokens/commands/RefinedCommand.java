@@ -14,6 +14,7 @@ import org.bukkit.inventory.ItemStack;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -68,6 +69,11 @@ public class RefinedCommand implements CommandExecutor, TabCompleter {
     }
 
     private boolean handleStorage(Player player) {
+        if (!plugin.getDupeProtection().begin(player, "refined-storage-toggle")) {
+            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
+            return true;
+        }
+        try {
         RefinedOreStorage storage = plugin.getRefinedStorage();
         UUID uuid = player.getUniqueId();
         boolean enabled = !storage.isAutoStoring(uuid);
@@ -75,9 +81,17 @@ public class RefinedCommand implements CommandExecutor, TabCompleter {
         storage.flush();
         player.sendMessage(MessageUtil.color(enabled ? "&aRefined auto-storage enabled." : "&cRefined auto-storage disabled."));
         return true;
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
+        }
     }
 
     private boolean handleStore(Player player) {
+        if (!plugin.getDupeProtection().begin(player, "refined-store")) {
+            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
+            return true;
+        }
+        try {
         int refined = 0;
         int compressed = 0;
         ItemStack[] contents = player.getInventory().getStorageContents();
@@ -106,6 +120,9 @@ public class RefinedCommand implements CommandExecutor, TabCompleter {
         storage.flush();
         player.sendMessage(MessageUtil.color("&aStored &b" + refined + " Refined Ore &aand &3" + compressed + " Compressed&a."));
         return true;
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
+        }
     }
 
     private boolean handleWithdraw(Player player, String[] args) {
@@ -117,6 +134,11 @@ public class RefinedCommand implements CommandExecutor, TabCompleter {
         int amount = parsePositiveInt(player, args[2]);
         if (amount < 0) return true;
 
+        if (!plugin.getDupeProtection().begin(player, "refined-withdraw")) {
+            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
+            return true;
+        }
+        try {
         String type = args[1].toLowerCase();
         RefinedOreStorage storage = plugin.getRefinedStorage();
         UUID uuid = player.getUniqueId();
@@ -144,6 +166,9 @@ public class RefinedCommand implements CommandExecutor, TabCompleter {
         storage.flush();
         player.sendMessage(MessageUtil.color("&aWithdrawn &e" + amount + " &a" + type + " to your inventory."));
         return true;
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
+        }
     }
 
     private void giveSplit(Player player, boolean refined, int amount) {
@@ -153,8 +178,11 @@ public class RefinedCommand implements CommandExecutor, TabCompleter {
             ItemStack item = refined
                 ? RefinedItemFactory.makeRefined(plugin, stackAmount)
                 : RefinedItemFactory.makeCompressed(plugin, stackAmount);
-            player.getInventory().addItem(item).values()
-                .forEach(leftover -> player.getWorld().dropItemNaturally(player.getLocation(), leftover));
+            Map<Integer, ItemStack> leftover = player.getInventory().addItem(item);
+            if (!leftover.isEmpty()) {
+                plugin.getDupeProtection().flag(player, "refined-withdraw", "Inventory overflow while withdrawing refined storage");
+                leftover.values().forEach(extra -> player.getWorld().dropItemNaturally(player.getLocation(), extra));
+            }
             remaining -= stackAmount;
         }
     }

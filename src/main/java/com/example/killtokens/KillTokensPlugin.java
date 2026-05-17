@@ -9,31 +9,27 @@ import com.example.killtokens.placeholders.RefinedPAPIExpansion;
 import com.example.killtokens.refined.RefinedOreListener;
 import com.example.killtokens.refined.RefinedOreStorage;
 import com.example.killtokens.refined.YamlRefinedOreStorage;
+import com.example.killtokens.security.DupeProtectionService;
 import com.example.killtokens.storage.TokenStorage;
 import com.example.killtokens.storage.YamlTokenStorage;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
-
 public class KillTokensPlugin extends JavaPlugin {
 
     private TokenStorage storage;
     private RefinedOreStorage refinedStorage;
+    private DupeProtectionService dupeProtection;
     private Economy economy;
     private TokensGui tokensGui;
-
-    // Per-player lock to prevent concurrent GUI/command double-spend
-    private final Set<UUID> processing = new HashSet<>();
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         storage = new YamlTokenStorage(getDataFolder(), getLogger());
         refinedStorage = new YamlRefinedOreStorage(getDataFolder(), getLogger());
+        dupeProtection = new DupeProtectionService(this);
 
         if (!hookVault()) {
             getLogger().severe("Vault not found or no economy provider registered. Disabling KillTokens.");
@@ -71,15 +67,6 @@ public class KillTokensPlugin extends JavaPlugin {
         }
     }
 
-    /** Returns true and acquires the lock if the player is not already processing. */
-    public synchronized boolean tryLock(UUID uuid) {
-        return processing.add(uuid);
-    }
-
-    public synchronized void unlock(UUID uuid) {
-        processing.remove(uuid);
-    }
-
     public TokenStorage getStorage() {
         return storage;
     }
@@ -94,6 +81,10 @@ public class KillTokensPlugin extends JavaPlugin {
 
     public TokensGui getTokensGui() {
         return tokensGui;
+    }
+
+    public DupeProtectionService getDupeProtection() {
+        return dupeProtection;
     }
 
     private boolean hookVault() {

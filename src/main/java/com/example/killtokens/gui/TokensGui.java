@@ -1,6 +1,7 @@
 package com.example.killtokens.gui;
 
 import com.example.killtokens.KillTokensPlugin;
+import com.example.killtokens.refined.RefinedOreStorage;
 import com.example.killtokens.util.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -12,33 +13,23 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
-/**
- * 45-slot (5-row) layout:
- *
- *  Row 0  [BK][BK][BK][BK][BK][BK][BK][BK][BK]   black border
- *  Row 1  [BK][GY][GY][GY][BAL][GY][GY][GY][BK]   balance  (slot 13)
- *  Row 2  [BK][GY][GY][GY][PRG][GY][GY][GY][BK]   progress (slot 22)
- *  Row 3  [BK][GY][WIT][GY][GY][GY][CSH][GY][BK]  actions  (slots 29, 33)
- *  Row 4  [BK][BK][BK][BK][CLO][BK][BK][BK][BK]   close    (slot 40)
- */
 public class TokensGui {
 
-    public static final int SLOT_BALANCE  = 13;
-    public static final int SLOT_PROGRESS = 22;
-    public static final int SLOT_WITHDRAW = 29;
-    public static final int SLOT_CASHOUT  = 33;
-    public static final int SLOT_CLOSE    = 40;
-
-    // Slots that are part of the black outer border
-    private static final int[] BORDER_SLOTS = {
-        0,  1,  2,  3,  4,  5,  6,  7,  8,   // row 0
-        9,  17,                                 // row 1 edges
-        18, 26,                                 // row 2 edges
-        27, 35,                                 // row 3 edges
-        36, 37, 38, 39, 40, 41, 42, 43, 44     // row 4
-    };
+    public static final int SIZE = 54;
+    public static final int SLOT_TOKEN_BALANCE = 10;
+    public static final int SLOT_TOKEN_WITHDRAW = 19;
+    public static final int SLOT_TOKEN_CASHOUT = 28;
+    public static final int SLOT_REFINED_BALANCE = 12;
+    public static final int SLOT_COMPRESSED_BALANCE = 14;
+    public static final int SLOT_REFINED_TOGGLE = 21;
+    public static final int SLOT_REFINED_STORE = 23;
+    public static final int SLOT_REFINED_WITHDRAW = 30;
+    public static final int SLOT_COMPRESSED_WITHDRAW = 32;
+    public static final int SLOT_DUPE_FLAGS = 16;
+    public static final int SLOT_CLOSE = 49;
 
     private final KillTokensPlugin plugin;
 
@@ -47,131 +38,90 @@ public class TokensGui {
     }
 
     public void open(Player player) {
-        String title = MessageUtil.color(plugin.getConfig().getString("gui-title", "&8&lKill Tokens"));
-        Inventory inv = Bukkit.createInventory(null, 45, title);
-
-        // Fill inner area with gray, then border with black
+        Inventory inv = Bukkit.createInventory(null, SIZE, title());
         ItemStack gray = pane(Material.GRAY_STAINED_GLASS_PANE);
         ItemStack black = pane(Material.BLACK_STAINED_GLASS_PANE);
 
-        for (int i = 0; i < 45; i++) {
+        for (int i = 0; i < SIZE; i++) {
             inv.setItem(i, gray);
         }
-        for (int s : BORDER_SLOTS) {
-            inv.setItem(s, black);
+        for (int i = 0; i < 9; i++) {
+            inv.setItem(i, black);
+            inv.setItem(45 + i, black);
+        }
+        for (int i = 9; i < 45; i += 9) {
+            inv.setItem(i, black);
+            inv.setItem(i + 8, black);
         }
 
-        int balance    = plugin.getStorage().getTokens(player.getUniqueId());
+        UUID uuid = player.getUniqueId();
+        RefinedOreStorage refined = plugin.getRefinedStorage();
+        int tokens = plugin.getStorage().getTokens(uuid);
         int cashTokens = plugin.getConfig().getInt("cash-tokens", 10);
-        double cashAmt = plugin.getConfig().getDouble("cash-amount", 100.0);
-        int needed     = Math.max(0, cashTokens - balance);
-        boolean ready  = balance >= cashTokens;
+        double cashAmount = plugin.getConfig().getDouble("cash-amount", 100.0);
+        int refinedBalance = refined.getRefinedBalance(uuid);
+        int compressedBalance = refined.getCompressedBalance(uuid);
+        boolean autoStore = refined.isAutoStoring(uuid);
 
-        inv.setItem(SLOT_BALANCE, buildBalance(balance, cashTokens, cashAmt));
-        inv.setItem(SLOT_PROGRESS, buildProgress(balance, cashTokens, needed, ready));
-        inv.setItem(SLOT_WITHDRAW, buildWithdraw(balance));
-        inv.setItem(SLOT_CASHOUT, buildCashout(cashTokens, cashAmt, needed, ready));
-        inv.setItem(SLOT_CLOSE, buildClose());
+        inv.setItem(SLOT_TOKEN_BALANCE, item(Material.GOLD_NUGGET, "&6&lKill Tokens",
+            "&7Balance: &e" + tokens,
+            "&7Cashout: &e" + cashTokens + " &7tokens for &a$" + String.format("%.2f", cashAmount),
+            "&7Needed: &e" + Math.max(0, cashTokens - tokens)));
+        inv.setItem(SLOT_TOKEN_WITHDRAW, item(Material.HOPPER, "&6Withdraw Kill Token",
+            "&7Moves &e1 &7virtual token to your inventory.",
+            tokens > 0 ? "&eClick to withdraw." : "&cNo tokens available."));
+        inv.setItem(SLOT_TOKEN_CASHOUT, item(tokens >= cashTokens ? Material.GOLD_INGOT : Material.IRON_INGOT,
+            tokens >= cashTokens ? "&aCash Out" : "&cCash Out Locked",
+            "&7Convert &e" + cashTokens + " &7tokens into &a$" + String.format("%.2f", cashAmount),
+            tokens >= cashTokens ? "&eClick to cash out." : "&cNeed " + Math.max(0, cashTokens - tokens) + " more tokens."));
+
+        inv.setItem(SLOT_REFINED_BALANCE, item(Material.BLUE_DYE, "&b&lRefined Ore",
+            "&7Stored: &b" + refinedBalance,
+            "&7Lifetime: &f" + refined.getRefinedTotal(uuid)));
+        inv.setItem(SLOT_COMPRESSED_BALANCE, item(Material.NAUTILUS_SHELL, "&3&lCompressed Refined Ore",
+            "&7Stored: &3" + compressedBalance,
+            "&7Lifetime: &f" + refined.getCompressedTotal(uuid)));
+        inv.setItem(SLOT_REFINED_TOGGLE, item(autoStore ? Material.LIME_DYE : Material.RED_DYE,
+            autoStore ? "&aAuto Storage Enabled" : "&cAuto Storage Disabled",
+            "&7Automatically stores mined refined drops.",
+            "&eClick to toggle."));
+        inv.setItem(SLOT_REFINED_STORE, item(Material.CHEST, "&bStore Physical Refined Items",
+            "&7Moves Refined Ore and Compressed Refined Ore",
+            "&7from inventory into virtual storage.",
+            "&eClick to store."));
+        inv.setItem(SLOT_REFINED_WITHDRAW, item(Material.DROPPER, "&bWithdraw Refined Ore",
+            "&7Moves &e1 &7stored Refined Ore to inventory.",
+            refinedBalance > 0 ? "&eClick to withdraw." : "&cNone stored."));
+        inv.setItem(SLOT_COMPRESSED_WITHDRAW, item(Material.DISPENSER, "&3Withdraw Compressed",
+            "&7Moves &e1 &7stored Compressed Refined Ore to inventory.",
+            compressedBalance > 0 ? "&eClick to withdraw." : "&cNone stored."));
+
+        inv.setItem(SLOT_DUPE_FLAGS, item(Material.REDSTONE_TORCH, "&c&lDupe Flags",
+            "&7Flag count: &c" + plugin.getDupeProtection().getFlagCount(uuid),
+            "&7Last flag: &f" + plugin.getDupeProtection().getLastFlag(uuid)));
+        inv.setItem(SLOT_CLOSE, item(Material.BARRIER, "&cClose", "&7Click to close."));
 
         player.openInventory(inv);
     }
 
-    // ── Item builders ──────────────────────────────────────────────────────────
-
-    private ItemStack buildBalance(int balance, int cashTokens, double cashAmt) {
-        return buildItem(Material.NETHER_STAR, "&6&lKill Tokens",
-            "&8&m                    ",
-            "&7  Balance    &8» &e" + balance + " tokens",
-            "&7  Cash rate  &8» &e" + cashTokens + " &7→ &a$" + String.format("%.2f", cashAmt),
-            "&8&m                    ");
+    public String title() {
+        return MessageUtil.color(plugin.getConfig().getString("gui-title", "&8&lKill Tokens"));
     }
 
-    private ItemStack buildProgress(int balance, int cashTokens, int needed, boolean ready) {
-        if (ready) {
-            return buildItem(Material.LIME_DYE, "&a&lReady to Cash Out!",
-                "&8&m                    ",
-                "&7  You have &e" + balance + " &7of &e" + cashTokens + " &7required tokens.",
-                "&7  Click &aCash Out &7below to redeem.",
-                "&8&m                    ");
-        }
-
-        String bar = buildBar(balance, cashTokens, 16);
-        return buildItem(Material.CLOCK, "&e&lProgress",
-            "&8&m                    ",
-            "&7  " + bar,
-            "&7  &e" + balance + " &7/ &e" + cashTokens + " &8(&c" + needed + " more needed&8)",
-            "&8&m                    ");
-    }
-
-    private ItemStack buildWithdraw(int balance) {
-        if (balance < 1) {
-            return buildItem(Material.GOLD_NUGGET, "&7&lWithdraw",
-                "&8&m                    ",
-                "&7  Take a token from your balance",
-                "&7  and place it in your inventory.",
-                "",
-                "&c  No tokens to withdraw.",
-                "&8&m                    ");
-        }
-        return buildItem(Material.GOLD_NUGGET, "&6&lWithdraw",
-            "&8&m                    ",
-            "&7  Take a token from your balance",
-            "&7  and place it in your inventory.",
-            "",
-            "&e  Click to withdraw &61 token&e.",
-            "&8&m                    ");
-    }
-
-    private ItemStack buildCashout(int cashTokens, double cashAmt, int needed, boolean ready) {
-        if (ready) {
-            return buildItem(Material.GOLD_INGOT, "&a&lCash Out",
-                "&8&m                    ",
-                "&7  Convert &e" + cashTokens + " tokens &7into",
-                "&7  &a$" + String.format("%.2f", cashAmt) + " &7in economy currency.",
-                "",
-                "&a  Click to cash out now!",
-                "&8&m                    ");
-        }
-        return buildItem(Material.IRON_INGOT, "&c&lCash Out &8(Locked)",
-            "&8&m                    ",
-            "&7  Convert &e" + cashTokens + " tokens &7into",
-            "&7  &a$" + String.format("%.2f", cashAmt) + " &7in economy currency.",
-            "",
-            "&c  Need &e" + needed + " &cmore tokens.",
-            "&8&m                    ");
-    }
-
-    private ItemStack buildClose() {
-        return buildItem(Material.BARRIER, "&c&lClose",
-            "&7  Click to close this menu.");
-    }
-
-    // ── Helpers ────────────────────────────────────────────────────────────────
-
-    /** Generates a simple colored progress bar string. */
-    private static String buildBar(int current, int max, int length) {
-        int filled = (int) Math.round((double) current / max * length);
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < length; i++) {
-            sb.append(i < filled ? "&a" : "&8").append("▌");
-        }
-        return sb.toString();
-    }
-
-    private ItemStack buildItem(Material mat, String name, String... lore) {
-        ItemStack item = new ItemStack(mat);
+    private ItemStack item(Material material, String name, String... lore) {
+        ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(MessageUtil.color(name));
-        List<String> colored = Arrays.stream(lore)
+        List<String> coloredLore = Arrays.stream(lore)
             .map(MessageUtil::color)
             .collect(Collectors.toList());
-        meta.setLore(colored);
+        meta.setLore(coloredLore);
         item.setItemMeta(meta);
         return item;
     }
 
-    private ItemStack pane(Material mat) {
-        ItemStack item = new ItemStack(mat);
+    private ItemStack pane(Material material) {
+        ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(" ");
         meta.setLore(Collections.emptyList());

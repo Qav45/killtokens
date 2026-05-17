@@ -49,6 +49,11 @@ public class RefinedPAPIExpansion extends PlaceholderExpansion {
             case "compressed_balance": return String.valueOf(refined.getCompressedBalance(uuid));
             case "refined_total": return String.valueOf(refined.getRefinedTotal(uuid));
             case "compressed_total": return String.valueOf(refined.getCompressedTotal(uuid));
+            case "refined_pity": return String.valueOf(refined.getRefinedPity(uuid));
+            case "compressed_pity": return String.valueOf(refined.getCompressedPity(uuid));
+            case "auto_storage": return refined.isAutoStoring(uuid) ? "true" : "false";
+            case "dupe_flags": return String.valueOf(plugin.getDupeProtection().getFlagCount(uuid));
+            case "last_dupe_flag": return plugin.getDupeProtection().getLastFlag(uuid);
             default: return existingTokenPlaceholder(uuid, params);
         }
     }
@@ -66,6 +71,10 @@ public class RefinedPAPIExpansion extends PlaceholderExpansion {
             case "cashout_value": return String.format("%.2f", cashAmount);
             case "tokens_needed": return String.valueOf(Math.max(0, cashTokens - balance));
             case "can_cashout": return balance >= cashTokens ? "true" : "false";
+            case "cashout_ready": return balance >= cashTokens ? "true" : "false";
+            case "total_virtual_items":
+                RefinedOreStorage refined = plugin.getRefinedStorage();
+                return String.valueOf(balance + refined.getRefinedBalance(uuid) + refined.getCompressedBalance(uuid));
             default: return null;
         }
     }
