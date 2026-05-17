@@ -267,7 +267,7 @@ public class GuiListener implements Listener {
         giveRefinedSplit(player, isRefined, amount);
         player.sendMessage(MessageUtil.color(isRefined
             ? "&aWithdrawn &b" + amount + " Refined Ore&a."
-            : "&aWithdrawn &d" + amount + " Compressed Refined Ore&a."));
+            : "&aWithdrawn &b" + amount + " Compressed Refined Ore&a."));
     }
 
     // -------------------------------------------------------------------------
@@ -308,7 +308,7 @@ public class GuiListener implements Listener {
         storage.addRefined(uuid, refined);
         storage.addCompressed(uuid, compressed);
         storage.flush();
-        player.sendMessage(MessageUtil.color("&aStored &b" + refined + " Refined Ore &aand &d" + compressed + " Compressed&a."));
+        player.sendMessage(MessageUtil.color("&aStored &b" + refined + " Refined Ore &aand &b" + compressed + " Compressed&a."));
     }
 
     // -------------------------------------------------------------------------

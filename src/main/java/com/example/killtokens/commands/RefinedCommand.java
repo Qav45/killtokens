@@ -65,7 +65,7 @@ public class RefinedCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(MessageUtil.color("&b&l  Refined Storage"));
         player.sendMessage(MessageUtil.color("&8&l===================="));
         player.sendMessage(MessageUtil.color("&7  Refined Ore: &b" + storage.getRefinedBalance(uuid)));
-        player.sendMessage(MessageUtil.color("&7  Compressed: &3" + storage.getCompressedBalance(uuid)));
+        player.sendMessage(MessageUtil.color("&7  Compressed: &b" + storage.getCompressedBalance(uuid)));
         player.sendMessage(MessageUtil.color("&7  Lifetime Refined: &f" + storage.getRefinedTotal(uuid)));
         player.sendMessage(MessageUtil.color("&7  Lifetime Compressed: &f" + storage.getCompressedTotal(uuid)));
         player.sendMessage(MessageUtil.color("&7  Auto Storage: " + (storage.isAutoStoring(uuid) ? "&aEnabled" : "&cDisabled")));
@@ -123,7 +123,7 @@ public class RefinedCommand implements CommandExecutor, TabCompleter {
         storage.addRefined(uuid, refined);
         storage.addCompressed(uuid, compressed);
         storage.flush();
-        player.sendMessage(MessageUtil.color("&aStored &b" + refined + " Refined Ore &aand &3" + compressed + " Compressed&a."));
+        player.sendMessage(MessageUtil.color("&aStored &b" + refined + " Refined Ore &aand &b" + compressed + " Compressed&a."));
         return true;
         } finally {
             plugin.getDupeProtection().end(player.getUniqueId());

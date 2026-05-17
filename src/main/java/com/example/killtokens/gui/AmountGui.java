@@ -90,8 +90,8 @@ public class AmountGui {
                     "&7Available: &b" + max,
                     "&7Choose how many to withdraw.");
             case COMPRESSED_WITHDRAW:
-                return item(Material.AMETHYST_SHARD, "&d&lWithdraw Compressed",
-                    "&7Available: &d" + max,
+                return item(Material.AMETHYST_SHARD, "&b&lWithdraw Compressed",
+                    "&7Available: &b" + max,
                     "&7Choose how many to withdraw.");
             default:
                 return item(Material.PAPER, "&fSelect Amount", "&7Available: &e" + max);

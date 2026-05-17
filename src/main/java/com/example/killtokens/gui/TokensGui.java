@@ -104,8 +104,8 @@ public class TokensGui {
             "&7Stored: &b" + refinedBal,
             "&7Lifetime: &f" + refined.getRefinedTotal(uuid)));
 
-        inv.setItem(SLOT_COMPRESSED_BALANCE, item(Material.AMETHYST_SHARD, "&d&lCompressed Refined",
-            "&7Stored: &d" + compBal,
+        inv.setItem(SLOT_COMPRESSED_BALANCE, item(Material.AMETHYST_SHARD, "&b&lCompressed Refined",
+            "&7Stored: &b" + compBal,
             "&7Lifetime: &f" + refined.getCompressedTotal(uuid)));
 
         inv.setItem(SLOT_REFINED_TOGGLE, item(
@@ -125,9 +125,9 @@ public class TokensGui {
                 : "&cNone stored.",
             refinedBal > 0 ? "&eClick to select amount." : ""));
 
-        inv.setItem(SLOT_COMPRESSED_WITHDRAW, item(Material.DISPENSER, "&dWithdraw Compressed",
+        inv.setItem(SLOT_COMPRESSED_WITHDRAW, item(Material.DISPENSER, "&bWithdraw Compressed",
             compBal > 0
-                ? "&7Stored: &d" + compBal
+                ? "&7Stored: &b" + compBal
                 : "&cNone stored.",
             compBal > 0 ? "&eClick to select amount." : ""));
 

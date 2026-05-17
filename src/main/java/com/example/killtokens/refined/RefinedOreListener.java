@@ -108,14 +108,14 @@ public class RefinedOreListener implements Listener {
         storage.addCompressedTotal(uuid, qty);
         if (storage.isAutoStoring(uuid)) {
             storage.addCompressed(uuid, qty);
-            player.sendMessage(MessageUtil.color("&3+" + qty + " Compressed Refined Ore &7stored" + suffix + "&7."));
+            player.sendMessage(MessageUtil.color("&b+" + qty + " Compressed Refined Ore &7stored" + suffix + "&7."));
         } else {
             giveItems(player, RefinedItemFactory.makeCompressed(plugin, qty));
-            player.sendMessage(MessageUtil.color("&3+" + qty + " Compressed Refined Ore" + suffix + "&7."));
+            player.sendMessage(MessageUtil.color("&b+" + qty + " Compressed Refined Ore" + suffix + "&7."));
         }
 
         if (plugin.getConfig().getBoolean("refined.broadcast-drops", true)) {
-            Bukkit.broadcastMessage(MessageUtil.color("&3&l" + player.getName() + " found Compressed Refined Ore!"));
+            Bukkit.broadcastMessage(MessageUtil.color("&b&l" + player.getName() + " found Compressed Refined Ore!"));
         }
     }
 
@@ -164,7 +164,7 @@ public class RefinedOreListener implements Listener {
 
         for (String rawLine : meta.getLore()) {
             String line = ChatColor.stripColor(rawLine);
-            if (!line.contains("Luck")) continue;
+            if (!line.toLowerCase().contains("luck")) continue;
             int level = parseLuckLevel(line);
             if (level >= 5) return 0.30;
             if (level > 0) return level * 0.05;
@@ -173,13 +173,28 @@ public class RefinedOreListener implements Listener {
     }
 
     private int parseLuckLevel(String line) {
-        String digits = line.replaceAll("\\D+", "");
-        if (!digits.isEmpty()) return Integer.parseInt(digits);
-        if (line.contains(" V")) return 5;
-        if (line.contains(" IV")) return 4;
-        if (line.contains(" III")) return 3;
-        if (line.contains(" II")) return 2;
-        if (line.contains(" I")) return 1;
+        // Find everything after "luck" (case-insensitive), strip leading punctuation/spaces
+        int idx = line.toLowerCase().indexOf("luck");
+        if (idx < 0) return 0;
+        String after = line.substring(idx + 4).replaceAll("^[:\\s]+", "");
+
+        // Numeric level: "Luck 3", "Luck: 5"
+        if (!after.isEmpty() && Character.isDigit(after.charAt(0))) {
+            StringBuilder sb = new StringBuilder();
+            for (char c : after.toCharArray()) {
+                if (!Character.isDigit(c)) break;
+                sb.append(c);
+            }
+            return Integer.parseInt(sb.toString());
+        }
+
+        // Roman numeral level (case-insensitive): "Luck V", "luck iv"
+        String upper = after.toUpperCase();
+        if (upper.startsWith("V"))   return 5;
+        if (upper.startsWith("IV"))  return 4;
+        if (upper.startsWith("III")) return 3;
+        if (upper.startsWith("II"))  return 2;
+        if (upper.startsWith("I"))   return 1;
         return 0;
     }
 }

@@ -29,7 +29,7 @@ public final class RefinedItemFactory {
     public static ItemStack makeCompressed(KillTokensPlugin plugin, int amount) {
         ItemStack item = new ItemStack(configMaterial(plugin, "refined.compressed-item", Material.NAUTILUS_SHELL), amount);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(MessageUtil.color("&3&lCompressed Refined Ore"));
+        meta.setDisplayName(MessageUtil.color("&b&lCompressed Refined Ore"));
         meta.setLore(Arrays.asList(
             MessageUtil.color("&7A dense cache of refined ore energy."),
             MessageUtil.color("&7Chance: &f1/" + plugin.getConfig().getInt("refined.compressed-chance", 3500)),
