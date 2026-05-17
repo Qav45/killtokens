@@ -2,6 +2,7 @@ package com.example.killtokens;
 
 import com.example.killtokens.commands.RefinedCommand;
 import com.example.killtokens.commands.TokensCommand;
+import com.example.killtokens.gui.AmountGui;
 import com.example.killtokens.gui.GuiListener;
 import com.example.killtokens.gui.TokensGui;
 import com.example.killtokens.listeners.PlayerDeathListener;
@@ -23,6 +24,7 @@ public class KillTokensPlugin extends JavaPlugin {
     private DupeProtectionService dupeProtection;
     private Economy economy;
     private TokensGui tokensGui;
+    private AmountGui amountGui;
 
     @Override
     public void onEnable() {
@@ -38,10 +40,11 @@ public class KillTokensPlugin extends JavaPlugin {
         }
 
         tokensGui = new TokensGui(this);
+        amountGui = new AmountGui(this);
 
         getServer().getPluginManager().registerEvents(new PlayerDeathListener(this), this);
         getServer().getPluginManager().registerEvents(new RefinedOreListener(this), this);
-        getServer().getPluginManager().registerEvents(new GuiListener(this, tokensGui), this);
+        getServer().getPluginManager().registerEvents(new GuiListener(this, tokensGui, amountGui), this);
 
         TokensCommand tokensCommand = new TokensCommand(this);
         getCommand("tokens").setExecutor(tokensCommand);
@@ -81,6 +84,10 @@ public class KillTokensPlugin extends JavaPlugin {
 
     public TokensGui getTokensGui() {
         return tokensGui;
+    }
+
+    public AmountGui getAmountGui() {
+        return amountGui;
     }
 
     public DupeProtectionService getDupeProtection() {

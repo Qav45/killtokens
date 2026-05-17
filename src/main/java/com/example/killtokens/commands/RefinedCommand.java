@@ -39,7 +39,12 @@ public class RefinedCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (args.length == 0 || args[0].equalsIgnoreCase("balance")) {
+        if (args.length == 0) {
+            plugin.getTokensGui().open(player);
+            return true;
+        }
+
+        if (args[0].equalsIgnoreCase("balance")) {
             return handleBalance(player);
         }
 
