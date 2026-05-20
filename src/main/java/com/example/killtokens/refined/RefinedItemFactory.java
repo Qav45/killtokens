@@ -27,11 +27,11 @@ public final class RefinedItemFactory {
     }
 
     public static ItemStack makeCompressed(KillTokensPlugin plugin, int amount) {
-        ItemStack item = new ItemStack(configMaterial(plugin, "refined.compressed-item", Material.NAUTILUS_SHELL), amount);
+        ItemStack item = new ItemStack(configMaterial(plugin, "refined.compressed-item", Material.DIAMOND_CHESTPLATE), amount);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(MessageUtil.color("&b&lCompressed Refined Ore"));
         meta.setLore(Arrays.asList(
-            MessageUtil.color("&7A dense cache of refined ore energy."),
+            MessageUtil.color("&7You can get this from mining ores not blocks."),
             MessageUtil.color("&7Chance: &f1/" + plugin.getConfig().getInt("refined.compressed-chance", 3500)),
             MessageUtil.color("&7Pity: &fGuaranteed after " + plugin.getConfig().getInt("refined.compressed-pity", 5000) + " ores")
         ));
@@ -44,7 +44,7 @@ public final class RefinedItemFactory {
     }
 
     public static boolean isCompressed(KillTokensPlugin plugin, ItemStack item) {
-        return hasName(item, configMaterial(plugin, "refined.compressed-item", Material.NAUTILUS_SHELL), "Compressed Refined Ore");
+        return hasName(item, configMaterial(plugin, "refined.compressed-item", Material.DIAMOND_CHESTPLATE), "Compressed Refined Ore");
     }
 
     private static boolean hasName(ItemStack item, Material material, String name) {
