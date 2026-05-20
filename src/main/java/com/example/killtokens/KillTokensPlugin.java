@@ -17,6 +17,8 @@ import net.milkbowl.vault.economy.Economy;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.logging.Level;
+
 public class KillTokensPlugin extends JavaPlugin {
 
     private TokenStorage storage;
@@ -60,8 +62,19 @@ public class KillTokensPlugin extends JavaPlugin {
         }
 
         // Flush both storages every 5 minutes to prevent data loss on crash
-        getServer().getScheduler().runTaskTimer(this,
-            () -> { storage.flush(); refinedStorage.flush(); },
+        getServer().getScheduler().runTaskTimerAsynchronously(this,
+            () -> {
+                try {
+                    storage.flush();
+                } catch (Exception e) {
+                    getLogger().log(Level.WARNING, "Error flushing storage", e);
+                }
+                try {
+                    refinedStorage.flush();
+                } catch (Exception e) {
+                    getLogger().log(Level.WARNING, "Error flushing refinedStorage", e);
+                }
+            },
             6000L, 6000L);
     }
 
