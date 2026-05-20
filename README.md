@@ -86,7 +86,7 @@ Refined Ore rolls on natural ore block breaks. Silk Touch can be excluded with `
 Default rewards:
 
 - Refined Ore: `BLUE_DYE`, base `1/85`, pity after `100` misses.
-- Compressed Refined Ore: `DIAMOND_CHESTPLATE`, base `1/3500`, pity after `5000` misses.
+- Compressed Refined Ore: `DIAMOND_NAUTILUS_ARMOR`, base `1/3500`, pity after `5000` misses.
 
 Drop rates, pity thresholds, broadcast behavior, and item materials are configurable in `config.yml`.
 
@@ -107,7 +107,7 @@ refined:
   broadcast-drops: true
   skip-silk-touch: true
   refined-item: BLUE_DYE
-  compressed-item: DIAMOND_CHESTPLATE
+  compressed-item: DIAMOND_NAUTILUS_ARMOR
 ```
 
 ## Dupe Protection And Staff Flags

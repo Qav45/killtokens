@@ -10,6 +10,8 @@ import java.util.Arrays;
 
 public final class RefinedItemFactory {
 
+    private static final String COMPRESSED_ITEM_ID = "DIAMOND_NAUTILUS_ARMOR";
+
     private RefinedItemFactory() {
     }
 
@@ -55,6 +57,9 @@ public final class RefinedItemFactory {
 
     private static Material configMaterial(KillTokensPlugin plugin, String path, Material fallback) {
         String configured = plugin.getConfig().getString(path, fallback.name());
+        if (COMPRESSED_ITEM_ID.equalsIgnoreCase(configured)) {
+            return Material.DIAMOND_CHESTPLATE;
+        }
         Material material = Material.matchMaterial(configured);
         return material == null ? fallback : material;
     }
