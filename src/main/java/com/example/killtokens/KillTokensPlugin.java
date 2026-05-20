@@ -58,6 +58,11 @@ public class KillTokensPlugin extends JavaPlugin {
             new RefinedPAPIExpansion(this).register();
             getLogger().info("PlaceholderAPI found - placeholders registered.");
         }
+
+        // Flush both storages every 5 minutes to prevent data loss on crash
+        getServer().getScheduler().runTaskTimer(this,
+            () -> { storage.flush(); refinedStorage.flush(); },
+            6000L, 6000L);
     }
 
     @Override
