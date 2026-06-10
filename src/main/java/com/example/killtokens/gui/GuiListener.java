@@ -245,6 +245,13 @@ public class GuiListener implements Listener {
                 return;
             }
         }
+        for (ShopGui.ItemCost cost : item.itemCosts) {
+            if (countMatching(player, cost) < cost.amount) {
+                deny(player);
+                player.sendMessage(MessageUtil.color("&cYou need &f" + cost.amount + "x " + cost.displayName() + " &cin your inventory."));
+                return;
+            }
+        }
 
         // Deduct virtual currencies first (cheap to refund), then money
         if (item.costRefined > 0)    refined.setRefinedBalance(uuid, refinedBal - item.costRefined);
@@ -269,19 +276,14 @@ public class GuiListener implements Listener {
         refined.flush();
         plugin.getStorage().flush();
 
+        // Take payment items after the virtual/money costs are settled
+        for (ShopGui.ItemCost cost : item.itemCosts) {
+            removeMatching(player, cost);
+        }
+
         // Deliver
         if (item.giveItem) {
-            ItemStack purchased = new ItemStack(item.material, item.amount);
-            if (item.name != null || !item.lore.isEmpty()) {
-                org.bukkit.inventory.meta.ItemMeta meta = purchased.getItemMeta();
-                if (item.name != null) meta.setDisplayName(MessageUtil.color(item.name));
-                if (!item.lore.isEmpty()) {
-                    java.util.List<String> colored = new java.util.ArrayList<>();
-                    for (String line : item.lore) colored.add(MessageUtil.color(line));
-                    meta.setLore(colored);
-                }
-                purchased.setItemMeta(meta);
-            }
+            ItemStack purchased = item.buildResult(plugin);
             Map<Integer, ItemStack> leftover = player.getInventory().addItem(purchased);
             if (!leftover.isEmpty()) {
                 leftover.values().forEach(extra -> player.getWorld().dropItemNaturally(player.getLocation(), extra));
@@ -295,6 +297,31 @@ public class GuiListener implements Listener {
 
         success(player);
         player.sendMessage(MessageUtil.color("&aPurchased &f" + item.displayName() + "&a!"));
+    }
+
+    private int countMatching(Player player, ShopGui.ItemCost cost) {
+        int count = 0;
+        for (ItemStack item : player.getInventory().getStorageContents()) {
+            if (cost.matches(item)) count += item.getAmount();
+        }
+        return count;
+    }
+
+    private void removeMatching(Player player, ShopGui.ItemCost cost) {
+        int remaining = cost.amount;
+        ItemStack[] contents = player.getInventory().getStorageContents();
+        for (int i = 0; i < contents.length && remaining > 0; i++) {
+            ItemStack item = contents[i];
+            if (!cost.matches(item)) continue;
+            int take = Math.min(remaining, item.getAmount());
+            remaining -= take;
+            if (take >= item.getAmount()) {
+                contents[i] = null;
+            } else {
+                item.setAmount(item.getAmount() - take);
+            }
+        }
+        player.getInventory().setStorageContents(contents);
     }
 
     private int slotToAmountIndex(int slot) {

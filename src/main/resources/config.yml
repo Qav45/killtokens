@@ -36,60 +36,268 @@ refined:
 
 # Refined U Shop - /refinedu opens a built-in shop GUI with section tabs.
 # Each section becomes a tab; each item is a buy button.
-# Costs can mix: refined, compressed, tokens, money (Vault).
-# Optional per item: name, lore, amount, commands (run as console, {player}
-# placeholder), give-item: false (commands only, no item handed over).
+# Costs can mix: refined, compressed, tokens, money (Vault), and items
+# (physical items taken from the inventory, matched by material + display name;
+# unnamed item costs only match plain unenchanted items).
+# Optional per item: name, lore, amount, enchantments, unbreakable, glow,
+# commands (run as console, {player} placeholder), give-item: false
+# (commands only, no item handed over).
 refinedu:
   enabled: true
   title: "&8&lRefined U Shop"
   sections:
-    gear:
-      name: "&bRefined Gear"
+    refined-shop:
+      name: "&9&lRefined Ore Shop"
       icon: DIAMOND_PICKAXE
       items:
-        - material: DIAMOND_PICKAXE
-          name: "&bRefined Pickaxe"
+        - material: BLACK_SHULKER_BOX
+          name: "&c&lMaxed Out Set"
           lore:
-            - "&7+50% refined ore find chance"
-          cost:
-            refined: 10
-        - material: DIAMOND_HELMET
-          name: "&bRefined Helmet"
-          cost:
-            refined: 8
-        - material: DIAMOND_CHESTPLATE
-          name: "&bRefined Chestplate"
-          cost:
-            refined: 12
-        - material: DIAMOND_LEGGINGS
-          name: "&bRefined Leggings"
-          cost:
-            refined: 10
-        - material: DIAMOND_BOOTS
-          name: "&bRefined Boots"
-          cost:
-            refined: 8
-    blocks:
-      name: "&6Blocks"
-      icon: GOLD_BLOCK
-      items:
-        - material: GOLD_BLOCK
-          amount: 4
-          cost:
-            tokens: 2
-        - material: DIAMOND_BLOCK
-          cost:
-            compressed: 1
-    special:
-      name: "&dSpecial"
-      icon: NETHER_STAR
-      items:
-        - material: NETHER_STAR
-          name: "&dMystery Reward"
-          lore:
-            - "&7Runs a console command."
+            - "&71x Maxed Out Set + Tools"
           give-item: false
           cost:
-            money: 5000.0
+            compressed: 1
           commands:
-            - "say {player} bought a Mystery Reward!"
+            - 'give {player} minecraft:black_shulker_box[minecraft:custom_name={text:"Maxed Out Set",color:"red",bold:true,italic:false},minecraft:lore=[{text:"1x Maxed Out Set + Tools",color:"gray",italic:false}],minecraft:container=[{slot:0,item:{id:"minecraft:netherite_helmet",count:1,components:{"minecraft:enchantments":{"minecraft:aqua_affinity":1,"minecraft:mending":1,"minecraft:protection":4,"minecraft:respiration":3,"minecraft:unbreaking":3}}}},{slot:1,item:{id:"minecraft:netherite_chestplate",count:1,components:{"minecraft:enchantments":{"minecraft:mending":1,"minecraft:protection":4,"minecraft:unbreaking":3}}}},{slot:2,item:{id:"minecraft:netherite_leggings",count:1,components:{"minecraft:enchantments":{"minecraft:mending":1,"minecraft:protection":4,"minecraft:swift_sneak":3,"minecraft:unbreaking":3}}}},{slot:3,item:{id:"minecraft:netherite_boots",count:1,components:{"minecraft:enchantments":{"minecraft:depth_strider":3,"minecraft:feather_falling":4,"minecraft:mending":1,"minecraft:protection":4,"minecraft:unbreaking":3}}}},{slot:4,item:{id:"minecraft:netherite_sword",count:1,components:{"minecraft:enchantments":{"minecraft:fire_aspect":2,"minecraft:looting":3,"minecraft:mending":1,"minecraft:sharpness":5,"minecraft:sweeping_edge":3,"minecraft:unbreaking":3}}}},{slot:5,item:{id:"minecraft:netherite_axe",count:1,components:{"minecraft:enchantments":{"minecraft:efficiency":5,"minecraft:mending":1,"minecraft:sharpness":5,"minecraft:unbreaking":3}}}},{slot:6,item:{id:"minecraft:netherite_pickaxe",count:1,components:{"minecraft:enchantments":{"minecraft:efficiency":5,"minecraft:fortune":3,"minecraft:mending":1,"minecraft:unbreaking":3}}}},{slot:7,item:{id:"minecraft:shield",count:1,components:{"minecraft:enchantments":{"minecraft:mending":1,"minecraft:unbreaking":3}}}},{slot:8,item:{id:"minecraft:netherite_spear",count:1,components:{"minecraft:enchantments":{"minecraft:fire_aspect":2,"minecraft:looting":3,"minecraft:mending":1,"minecraft:sharpness":5,"minecraft:unbreaking":3}}}}]] 1'
+        - material: BLACK_SHULKER_BOX
+          name: "&c&lMaxed Out Set"
+          lore:
+            - "&71x Maxed Out Set + Tools"
+          give-item: false
+          cost:
+            refined: 32
+          commands:
+            - 'give {player} minecraft:black_shulker_box[minecraft:custom_name={text:"Maxed Out Set",color:"red",bold:true,italic:false},minecraft:lore=[{text:"1x Maxed Out Set + Tools",color:"gray",italic:false}],minecraft:container=[{slot:0,item:{id:"minecraft:netherite_helmet",count:1,components:{"minecraft:enchantments":{"minecraft:aqua_affinity":1,"minecraft:mending":1,"minecraft:protection":4,"minecraft:respiration":3,"minecraft:unbreaking":3}}}},{slot:1,item:{id:"minecraft:netherite_chestplate",count:1,components:{"minecraft:enchantments":{"minecraft:mending":1,"minecraft:protection":4,"minecraft:unbreaking":3}}}},{slot:2,item:{id:"minecraft:netherite_leggings",count:1,components:{"minecraft:enchantments":{"minecraft:mending":1,"minecraft:protection":4,"minecraft:swift_sneak":3,"minecraft:unbreaking":3}}}},{slot:3,item:{id:"minecraft:netherite_boots",count:1,components:{"minecraft:enchantments":{"minecraft:depth_strider":3,"minecraft:feather_falling":4,"minecraft:mending":1,"minecraft:protection":4,"minecraft:unbreaking":3}}}},{slot:4,item:{id:"minecraft:netherite_sword",count:1,components:{"minecraft:enchantments":{"minecraft:fire_aspect":2,"minecraft:looting":3,"minecraft:mending":1,"minecraft:sharpness":5,"minecraft:sweeping_edge":3,"minecraft:unbreaking":3}}}},{slot:5,item:{id:"minecraft:netherite_axe",count:1,components:{"minecraft:enchantments":{"minecraft:efficiency":5,"minecraft:mending":1,"minecraft:sharpness":5,"minecraft:unbreaking":3}}}},{slot:6,item:{id:"minecraft:netherite_pickaxe",count:1,components:{"minecraft:enchantments":{"minecraft:efficiency":5,"minecraft:fortune":3,"minecraft:mending":1,"minecraft:unbreaking":3}}}},{slot:7,item:{id:"minecraft:shield",count:1,components:{"minecraft:enchantments":{"minecraft:mending":1,"minecraft:unbreaking":3}}}},{slot:8,item:{id:"minecraft:netherite_spear",count:1,components:{"minecraft:enchantments":{"minecraft:fire_aspect":2,"minecraft:looting":3,"minecraft:mending":1,"minecraft:sharpness":5,"minecraft:unbreaking":3}}}}]] 1'
+        - material: ORANGE_SHULKER_BOX
+          name: "&6&lElytra Pack"
+          lore:
+            - "&71x Elytra and a lot of fireworks"
+          give-item: false
+          cost:
+            refined: 25
+          commands:
+            - 'give {player} minecraft:orange_shulker_box[minecraft:custom_name={text:"Elytra Pack",color:"gold",bold:true,italic:false},minecraft:lore=[{text:"1x Elytra and a lot of fireworks",color:"gray",italic:false}],minecraft:container=[{slot:0,item:{id:"minecraft:elytra",count:1}},{slot:1,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:2,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:3,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:4,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:5,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:6,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:7,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:8,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:9,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:10,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:11,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:12,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:13,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:14,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:15,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:16,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:17,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:18,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:19,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:20,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:21,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:22,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:23,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:24,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:25,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}},{slot:26,item:{id:"minecraft:firework_rocket",count:64,components:{"minecraft:fireworks":{flight_duration:3b}}}}]] 1'
+        - material: NETHERITE_PICKAXE
+          name: "&8Hardened Spear"
+          lore:
+            - "&7Luck 2"
+            - "&7It is a spear that can mine? Probably not good at it."
+          unbreakable: true
+          enchantments:
+            efficiency: 5
+            fortune: 3
+            mending: 1
+            unbreaking: 3
+          cost:
+            refined: 6
+        - material: IRON_PICKAXE
+          name: "&fFragile Pickaxe"
+          enchantments:
+            efficiency: 6
+            fortune: 3
+            mending: 1
+            unbreaking: 3
+          cost:
+            items:
+              - material: DIAMOND
+                amount: 3
+        - material: DIAMOND_PICKAXE
+          name: "&bHalf-Half Pickaxe"
+          lore:
+            - "&7Not the best, not the weakest."
+          unbreakable: true
+          enchantments:
+            efficiency: 5
+            fortune: 4
+            mending: 1
+            unbreaking: 3
+          cost:
+            refined: 3
+            items:
+              - material: DIAMOND
+                amount: 3
+        - material: NETHERITE_PICKAXE
+          name: "&dLucky Mans Pickaxe"
+          lore:
+            - "&7Luck 3"
+            - "&7You might have a luck streak from this."
+          unbreakable: true
+          enchantments:
+            fortune: 5
+          cost:
+            compressed: 1
+        - material: NETHERITE_PICKAXE
+          name: "&9Instellar Pickaxe"
+          lore:
+            - "&7Luck 1"
+            - "&9An instellar pickaxe."
+          enchantments:
+            efficiency: 6
+            fortune: 5
+          cost:
+            refined: 32
+        - material: NETHERITE_PICKAXE
+          name: "&8Gray Pickaxe"
+          lore:
+            - "&7Luck 1"
+            - "&7It's gray pickaxe. Made from gray stuff."
+          unbreakable: true
+          enchantments:
+            efficiency: 6
+            fortune: 5
+            mending: 1
+            unbreaking: 4
+          cost:
+            refined: 64
+        - material: EXPERIENCE_BOTTLE
+          amount: 16
+          cost:
+            refined: 1
+    refined-shop2:
+      name: "&9&lRefined Ore Shop 2"
+      icon: NETHERITE_SWORD
+      items:
+        - material: IRON_SWORD
+          name: "&fMetallic Sword"
+          unbreakable: true
+          enchantments:
+            fire_aspect: 2
+            looting: 4
+            mending: 1
+            sharpness: 5
+            sweeping_edge: 3
+            unbreaking: 3
+          cost:
+            refined: 2
+            items:
+              - material: IRON_SWORD
+        - material: GOLDEN_SWORD
+          name: "&a*Instantly breaks*"
+          enchantments:
+            fire_aspect: 2
+            looting: 4
+            mending: 1
+            sharpness: 5
+            sweeping_edge: 3
+          cost:
+            refined: 32
+            items:
+              - material: GOLDEN_SWORD
+        - material: DIAMOND_SWORD
+          name: "&9Sword Of Diamond"
+          enchantments:
+            fire_aspect: 2
+            looting: 4
+            mending: 1
+            sharpness: 5
+            sweeping_edge: 3
+            unbreaking: 3
+          cost:
+            refined: 64
+            items:
+              - material: DIAMOND_SWORD
+        - material: NETHERITE_SWORD
+          name: "&8Netherite Sword"
+          enchantments:
+            fire_aspect: 2
+            looting: 4
+            mending: 1
+            sharpness: 5
+            smite: 5
+            sweeping_edge: 3
+            unbreaking: 3
+          cost:
+            compressed: 1
+            items:
+              - material: NETHERITE_SWORD
+        - material: MACE
+          cost:
+            compressed: 1
+            items:
+              - material: OMINOUS_TRIAL_KEY
+                amount: 3
+                name: "Stellar Crest"
+    ancient:
+      name: "&4Ancient Dealer"
+      icon: NETHER_STAR
+      items:
+        - material: FIREWORK_STAR
+          amount: 5
+          name: "&fNether Star Bits"
+          glow: true
+          cost:
+            items:
+              - material: NETHER_STAR
+                amount: 1
+                name: "Ancient Nether Star"
+        - material: ANCIENT_DEBRIS
+          name: "&3Ancient Ore"
+          lore:
+            - "&7Very old and very fragile"
+          glow: true
+          cost:
+            refined: 1
+            items:
+              - material: FIREWORK_STAR
+                amount: 10
+                name: "Nether Star Bits"
+        - material: FIREWORK_ROCKET
+          amount: 64
+          name: "&fFirework Rockets"
+          lore:
+            - "&7Flight duration 3"
+          give-item: false
+          cost:
+            items:
+              - material: FIREWORK_STAR
+                amount: 1
+                name: "Nether Star Bits"
+          commands:
+            - 'give {player} minecraft:firework_rocket[minecraft:fireworks={flight_duration:3b}] 64'
+        - material: DIAMOND
+          name: "&9&lInfused Diamond"
+          lore:
+            - "&7A diamond infused with a nether star."
+            - "&7So strong that it has a gradient."
+          glow: true
+          cost:
+            items:
+              - material: NETHER_STAR
+                amount: 1
+                name: "Ancient Nether Star"
+              - material: DIAMOND
+                amount: 1
+        - material: NETHERITE_PICKAXE
+          name: "&8&lAncient Pickaxe"
+          lore:
+            - "&7Luck 3"
+          unbreakable: true
+          enchantments:
+            efficiency: 6
+            fortune: 5
+            mending: 1
+            unbreaking: 4
+          cost:
+            items:
+              - material: DIAMOND
+                amount: 3
+                name: "Infused Diamond"
+              - material: ANCIENT_DEBRIS
+                amount: 4
+                name: "Ancient Ore"
+        - material: PLAYER_HEAD
+          name: "&8&lAncient Helmet"
+          lore:
+            - "&7A helmet lost to time."
+            - "&7+ Mining Speed"
+          give-item: false
+          cost:
+            items:
+              - material: NETHER_STAR
+                amount: 4
+                name: "Ancient Nether Star"
+              - material: ANCIENT_DEBRIS
+                amount: 2
+                name: "Ancient Ore"
+          commands:
+            - 'give {player} minecraft:player_head[minecraft:profile={properties:[{name:"textures",value:"eyJ0ZXh0dXJlcyI6eyJTS0lOIjp7InVybCI6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvZDdhYjdiM2IwOGM1MWI0Y2E0NTQ5MDZjYzQzZTZjNGI4ZTAxN2RhZWZhMDJlNjU0NjA0MzhmNzJlZDk2YjM4YyJ9fX0="}]},minecraft:custom_name={text:"Ancient Helmet",color:"dark_gray",bold:true,italic:false},minecraft:lore=[{text:"A helmet lost to time.",color:"gray",italic:false},{text:"+ Mining Speed",color:"gray",italic:false}],minecraft:attribute_modifiers=[{type:"minecraft:block_break_speed",amount:0.1d,operation:"add_value",id:"minecraft:ancient_helmet",slot:"head"}]] 1'

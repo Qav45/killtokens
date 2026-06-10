@@ -4,7 +4,9 @@ import com.example.killtokens.KillTokensPlugin;
 import com.example.killtokens.refined.RefinedOreStorage;
 import com.example.killtokens.util.MessageUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -15,7 +17,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -24,8 +28,9 @@ import java.util.UUID;
  *
  * Everything is config-driven (refinedu.sections): each section becomes a tab in
  * the top row, and each item in a section is a buy button. Costs can mix refined
- * ore, compressed refined ore, kill tokens, and Vault money. A purchase can give
- * the displayed item and/or run console commands.
+ * ore, compressed refined ore, kill tokens, Vault money, and physical items from
+ * the player's inventory (matched by material and display name). A purchase can
+ * give the displayed item and/or run console commands.
  */
 public class ShopGui {
 
@@ -179,6 +184,39 @@ public class ShopGui {
 
     // -------------------------------------------------------------------------
 
+    /**
+     * A physical item taken from the player's inventory as payment.
+     * If {@code name} is set, items must carry that display name (colors ignored).
+     * If {@code name} is null, only plain items (no custom name, no enchantments)
+     * match, so special named variants are never consumed by accident.
+     */
+    public static final class ItemCost {
+
+        public final Material material;
+        public final int amount;
+        public final String name;
+
+        ItemCost(Material material, int amount, String name) {
+            this.material = material;
+            this.amount = amount;
+            this.name = name;
+        }
+
+        public boolean matches(ItemStack item) {
+            if (item == null || item.getType() != material) return false;
+            ItemMeta meta = item.hasItemMeta() ? item.getItemMeta() : null;
+            if (name == null) {
+                return (meta == null || !meta.hasDisplayName()) && item.getEnchantments().isEmpty();
+            }
+            return meta != null && meta.hasDisplayName()
+                && name.equals(ChatColor.stripColor(meta.getDisplayName()));
+        }
+
+        public String displayName() {
+            return name != null ? name : prettyMaterial(material);
+        }
+    }
+
     /** One purchasable entry, parsed leniently from a config map. */
     public static final class ShopItem {
 
@@ -186,24 +224,33 @@ public class ShopGui {
         public final int amount;
         public final String name;
         public final List<String> lore;
+        public final Map<Enchantment, Integer> enchantments;
+        public final boolean unbreakable;
+        public final boolean glow;
         public final int costRefined;
         public final int costCompressed;
         public final int costTokens;
         public final double costMoney;
+        public final List<ItemCost> itemCosts;
         public final List<String> commands;
         public final boolean giveItem;
 
         private ShopItem(Material material, int amount, String name, List<String> lore,
+                         Map<Enchantment, Integer> enchantments, boolean unbreakable, boolean glow,
                          int costRefined, int costCompressed, int costTokens, double costMoney,
-                         List<String> commands, boolean giveItem) {
+                         List<ItemCost> itemCosts, List<String> commands, boolean giveItem) {
             this.material = material;
             this.amount = amount;
             this.name = name;
             this.lore = lore;
+            this.enchantments = enchantments;
+            this.unbreakable = unbreakable;
+            this.glow = glow;
             this.costRefined = costRefined;
             this.costCompressed = costCompressed;
             this.costTokens = costTokens;
             this.costMoney = costMoney;
+            this.itemCosts = itemCosts;
             this.commands = commands;
             this.giveItem = giveItem;
         }
@@ -225,16 +272,45 @@ public class ShopGui {
                 for (Object line : (List<Object>) map.get("lore")) lore.add(String.valueOf(line));
             }
 
+            Map<Enchantment, Integer> enchantments = new LinkedHashMap<>();
+            if (map.get("enchantments") instanceof Map) {
+                for (Map.Entry<?, ?> entry : ((Map<?, ?>) map.get("enchantments")).entrySet()) {
+                    Enchantment ench = enchantmentByName(String.valueOf(entry.getKey()));
+                    int level = intOf(entry.getValue(), 1);
+                    if (ench == null) {
+                        plugin.getLogger().warning("Shop section '" + sectionId + "': unknown enchantment '" + entry.getKey() + "'.");
+                    } else {
+                        enchantments.put(ench, level);
+                    }
+                }
+            }
+            boolean unbreakable = Boolean.TRUE.equals(map.get("unbreakable"));
+            boolean glow = Boolean.TRUE.equals(map.get("glow"));
+
             int costRefined = 0, costCompressed = 0, costTokens = 0;
             double costMoney = 0;
+            List<ItemCost> itemCosts = new ArrayList<>();
             if (map.get("cost") instanceof Map) {
                 Map<?, ?> cost = (Map<?, ?>) map.get("cost");
                 costRefined = intOf(cost.get("refined"), 0);
                 costCompressed = intOf(cost.get("compressed"), 0);
                 costTokens = intOf(cost.get("tokens"), 0);
                 costMoney = doubleOf(cost.get("money"), 0);
+                if (cost.get("items") instanceof List) {
+                    for (Object entry : (List<Object>) cost.get("items")) {
+                        if (!(entry instanceof Map)) continue;
+                        Map<?, ?> itemMap = (Map<?, ?>) entry;
+                        Material costMat = Material.matchMaterial(String.valueOf(itemMap.get("material")));
+                        if (costMat == null) {
+                            plugin.getLogger().warning("Shop section '" + sectionId + "': skipping item cost with invalid material '" + itemMap.get("material") + "'.");
+                            continue;
+                        }
+                        String costName = itemMap.get("name") == null ? null : String.valueOf(itemMap.get("name"));
+                        itemCosts.add(new ItemCost(costMat, Math.max(1, intOf(itemMap.get("amount"), 1)), costName));
+                    }
+                }
             }
-            if (costRefined <= 0 && costCompressed <= 0 && costTokens <= 0 && costMoney <= 0) {
+            if (costRefined <= 0 && costCompressed <= 0 && costTokens <= 0 && costMoney <= 0 && itemCosts.isEmpty()) {
                 plugin.getLogger().warning("Shop section '" + sectionId + "': skipping item '" + matName + "' with no cost.");
                 return null;
             }
@@ -245,22 +321,48 @@ public class ShopGui {
             }
             boolean giveItem = !(map.get("give-item") instanceof Boolean) || (Boolean) map.get("give-item");
 
-            return new ShopItem(material, Math.max(1, amount), name, lore,
-                costRefined, costCompressed, costTokens, costMoney, commands, giveItem);
+            return new ShopItem(material, Math.max(1, amount), name, lore, enchantments, unbreakable, glow,
+                costRefined, costCompressed, costTokens, costMoney, itemCosts, commands, giveItem);
         }
 
-        public ItemStack buildDisplay(KillTokensPlugin plugin) {
-            ItemStack item = new ItemStack(material, Math.min(64, amount));
+        /** Builds the actual item handed to the player on purchase. */
+        public ItemStack buildResult(KillTokensPlugin plugin) {
+            ItemStack item = new ItemStack(material, Math.max(1, Math.min(64, amount)));
             ItemMeta meta = item.getItemMeta();
             if (name != null) meta.setDisplayName(MessageUtil.color(name));
-            List<String> display = new ArrayList<>();
-            for (String line : lore) display.add(MessageUtil.color(line));
+            if (!lore.isEmpty()) {
+                List<String> colored = new ArrayList<>();
+                for (String line : lore) colored.add(MessageUtil.color(line));
+                meta.setLore(colored);
+            }
+            for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
+                meta.addEnchant(entry.getKey(), entry.getValue(), true);
+            }
+            if (unbreakable) {
+                meta.setUnbreakable(true);
+            }
+            if (glow && enchantments.isEmpty()) {
+                meta.addEnchant(Enchantment.LUCK, 1, true);
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            }
+            item.setItemMeta(meta);
+            return item;
+        }
+
+        /** Builds the GUI button: the result item with cost lines appended to the lore. */
+        public ItemStack buildDisplay(KillTokensPlugin plugin) {
+            ItemStack item = buildResult(plugin);
+            ItemMeta meta = item.getItemMeta();
+            List<String> display = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
             display.add("");
             display.add(MessageUtil.color("&7Cost:"));
             if (costRefined > 0)    display.add(MessageUtil.color("  &b" + costRefined + " Refined Ore"));
             if (costCompressed > 0) display.add(MessageUtil.color("  &d" + costCompressed + " Compressed"));
             if (costTokens > 0)     display.add(MessageUtil.color("  &e" + costTokens + " Kill Tokens"));
             if (costMoney > 0)      display.add(MessageUtil.color("  &a$" + String.format("%.2f", costMoney)));
+            for (ItemCost cost : itemCosts) {
+                display.add(MessageUtil.color("  &f" + cost.amount + "x " + cost.displayName()));
+            }
             display.add("");
             display.add(MessageUtil.color("&e» Click to buy"));
             meta.setLore(display);
@@ -269,7 +371,12 @@ public class ShopGui {
         }
 
         public String displayName() {
-            return name != null ? MessageUtil.color(name) : material.name();
+            return name != null ? MessageUtil.color(name) : prettyMaterial(material);
+        }
+
+        private static Enchantment enchantmentByName(String raw) {
+            String key = raw.toLowerCase(Locale.ROOT).replace("minecraft:", "").trim();
+            return Enchantment.getByKey(NamespacedKey.minecraft(key));
         }
 
         private static int intOf(Object value, int def) {
@@ -289,5 +396,15 @@ public class ShopGui {
                 return def;
             }
         }
+    }
+
+    private static String prettyMaterial(Material material) {
+        String[] parts = material.name().toLowerCase(Locale.ROOT).split("_");
+        StringBuilder sb = new StringBuilder();
+        for (String part : parts) {
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        }
+        return sb.toString();
     }
 }
