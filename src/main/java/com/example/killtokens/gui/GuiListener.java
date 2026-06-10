@@ -23,11 +23,13 @@ public class GuiListener implements Listener {
     private final KillTokensPlugin plugin;
     private final TokensGui gui;
     private final AmountGui amountGui;
+    private final ShopGui shopGui;
 
-    public GuiListener(KillTokensPlugin plugin, TokensGui gui, AmountGui amountGui) {
+    public GuiListener(KillTokensPlugin plugin, TokensGui gui, AmountGui amountGui, ShopGui shopGui) {
         this.plugin = plugin;
         this.gui = gui;
         this.amountGui = amountGui;
+        this.shopGui = shopGui;
     }
 
     @EventHandler
@@ -46,10 +48,10 @@ public class GuiListener implements Listener {
         // Raw slots >= top inventory size are the player's own inventory.
         if (slot < 0 || slot >= event.getInventory().getSize()) return;
 
-        if (holder.getView() == GuiHolder.View.MAIN) {
-            handleMainGui(player, slot);
-        } else {
-            handleAmountGui(player, slot, holder.getAmountType());
+        switch (holder.getView()) {
+            case MAIN:   handleMainGui(player, slot); break;
+            case AMOUNT: handleAmountGui(player, slot, holder.getAmountType()); break;
+            case SHOP:   handleShopGui(player, slot, holder.getShopSection()); break;
         }
     }
 
@@ -161,6 +163,138 @@ public class GuiListener implements Listener {
 
         // Refresh the main GUI after the action
         gui.open(player);
+    }
+
+    // -------------------------------------------------------------------------
+    // Shop GUI
+    // -------------------------------------------------------------------------
+
+    private void handleShopGui(Player player, int slot, String sectionId) {
+        java.util.List<String> sections = shopGui.sectionIds();
+
+        int tabIdx = ShopGui.tabIndex(slot, sections.size());
+        if (tabIdx >= 0) {
+            click(player);
+            shopGui.open(player, sections.get(tabIdx));
+            return;
+        }
+
+        if (slot == ShopGui.SLOT_CLOSE) {
+            click(player);
+            player.closeInventory();
+            return;
+        }
+
+        int itemIdx = -1;
+        for (int i = 0; i < ShopGui.ITEM_SLOTS.length; i++) {
+            if (ShopGui.ITEM_SLOTS[i] == slot) { itemIdx = i; break; }
+        }
+        if (itemIdx < 0) return;
+
+        java.util.List<ShopGui.ShopItem> items = shopGui.items(sectionId);
+        if (itemIdx >= items.size()) return;
+
+        if (!plugin.getDupeProtection().begin(player, "shop-buy")) {
+            denyBusy(player);
+            return;
+        }
+        try {
+            performPurchase(player, items.get(itemIdx));
+        } finally {
+            plugin.getDupeProtection().end(player.getUniqueId());
+        }
+
+        // Refresh so balances and stock displays update
+        shopGui.open(player, sectionId);
+    }
+
+    private void performPurchase(Player player, ShopGui.ShopItem item) {
+        UUID uuid = player.getUniqueId();
+        RefinedOreStorage refined = plugin.getRefinedStorage();
+        Economy economy = plugin.getEconomy();
+
+        // Verify every cost up front
+        int refinedBal = refined.getRefinedBalance(uuid);
+        int compBal = refined.getCompressedBalance(uuid);
+        int tokenBal = plugin.getStorage().getTokens(uuid);
+
+        if (item.costRefined > refinedBal) {
+            deny(player);
+            player.sendMessage(MessageUtil.color("&cYou need &b" + item.costRefined + " Refined Ore &c(have " + refinedBal + ")."));
+            return;
+        }
+        if (item.costCompressed > compBal) {
+            deny(player);
+            player.sendMessage(MessageUtil.color("&cYou need &d" + item.costCompressed + " Compressed &c(have " + compBal + ")."));
+            return;
+        }
+        if (item.costTokens > tokenBal) {
+            deny(player);
+            player.sendMessage(MessageUtil.color("&cYou need &e" + item.costTokens + " Kill Tokens &c(have " + tokenBal + ")."));
+            return;
+        }
+        if (item.costMoney > 0) {
+            if (economy == null) {
+                deny(player);
+                player.sendMessage(MessageUtil.color("&cEconomy system is unavailable. Contact an administrator."));
+                return;
+            }
+            if (!economy.has(player, item.costMoney)) {
+                deny(player);
+                player.sendMessage(MessageUtil.color("&cYou need &a$" + String.format("%.2f", item.costMoney) + "&c."));
+                return;
+            }
+        }
+
+        // Deduct virtual currencies first (cheap to refund), then money
+        if (item.costRefined > 0)    refined.setRefinedBalance(uuid, refinedBal - item.costRefined);
+        if (item.costCompressed > 0) refined.setCompressedBalance(uuid, compBal - item.costCompressed);
+        if (item.costTokens > 0)     plugin.getStorage().setTokens(uuid, tokenBal - item.costTokens);
+
+        if (item.costMoney > 0) {
+            EconomyResponse response = economy.withdrawPlayer(player, item.costMoney);
+            if (!response.transactionSuccess()) {
+                // Refund virtual currencies
+                if (item.costRefined > 0)    refined.setRefinedBalance(uuid, refinedBal);
+                if (item.costCompressed > 0) refined.setCompressedBalance(uuid, compBal);
+                if (item.costTokens > 0)     plugin.getStorage().setTokens(uuid, tokenBal);
+                refined.flush();
+                plugin.getStorage().flush();
+                plugin.getDupeProtection().flag(player, "shop-buy", "Vault withdraw failed after virtual deduction; refunded");
+                deny(player);
+                player.sendMessage(MessageUtil.color("&cPurchase failed. Your balances were refunded."));
+                return;
+            }
+        }
+        refined.flush();
+        plugin.getStorage().flush();
+
+        // Deliver
+        if (item.giveItem) {
+            ItemStack purchased = new ItemStack(item.material, item.amount);
+            if (item.name != null || !item.lore.isEmpty()) {
+                org.bukkit.inventory.meta.ItemMeta meta = purchased.getItemMeta();
+                if (item.name != null) meta.setDisplayName(MessageUtil.color(item.name));
+                if (!item.lore.isEmpty()) {
+                    java.util.List<String> colored = new java.util.ArrayList<>();
+                    for (String line : item.lore) colored.add(MessageUtil.color(line));
+                    meta.setLore(colored);
+                }
+                purchased.setItemMeta(meta);
+            }
+            Map<Integer, ItemStack> leftover = player.getInventory().addItem(purchased);
+            if (!leftover.isEmpty()) {
+                leftover.values().forEach(extra -> player.getWorld().dropItemNaturally(player.getLocation(), extra));
+                player.sendMessage(MessageUtil.color("&eInventory full! Your purchase dropped at your location."));
+            }
+        }
+        for (String command : item.commands) {
+            org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(),
+                command.replace("{player}", player.getName()));
+        }
+
+        success(player);
+        player.sendMessage(MessageUtil.color("&aPurchased &f" + item.displayName() + "&a!"));
     }
 
     private int slotToAmountIndex(int slot) {

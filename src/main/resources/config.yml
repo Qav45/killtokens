@@ -34,15 +34,62 @@ refined:
   refined-item: BLUE_DYE
   compressed-item: DIAMOND_NAUTILUS_ARMOR
 
-# Opens the merged Shopkeepers admin shop created from the Refined Ore shops.
+# Refined U Shop - /refinedu opens a built-in shop GUI with section tabs.
+# Each section becomes a tab; each item is a buy button.
+# Costs can mix: refined, compressed, tokens, money (Vault).
+# Optional per item: name, lore, amount, commands (run as console, {player}
+# placeholder), give-item: false (commands only, no item handed over).
 refinedu:
   enabled: true
-  shopkeeper-id: 78
-  # Default Shopkeepers syntax. Change this if your installed version uses a different open command.
-  open-command: "shopkeeper open {shopId}"
-  # Set true only if your open-command includes a target, for example:
-  # open-command: "shopkeeper open {shopId} {player}"
-  dispatch-as-console: false
-  # Granted only while /refinedu dispatches the configured Shopkeepers command.
-  temporary-permissions:
-    - shopkeepers.openbyid
+  title: "&8&lRefined U Shop"
+  sections:
+    gear:
+      name: "&bRefined Gear"
+      icon: DIAMOND_PICKAXE
+      items:
+        - material: DIAMOND_PICKAXE
+          name: "&bRefined Pickaxe"
+          lore:
+            - "&7+50% refined ore find chance"
+          cost:
+            refined: 10
+        - material: DIAMOND_HELMET
+          name: "&bRefined Helmet"
+          cost:
+            refined: 8
+        - material: DIAMOND_CHESTPLATE
+          name: "&bRefined Chestplate"
+          cost:
+            refined: 12
+        - material: DIAMOND_LEGGINGS
+          name: "&bRefined Leggings"
+          cost:
+            refined: 10
+        - material: DIAMOND_BOOTS
+          name: "&bRefined Boots"
+          cost:
+            refined: 8
+    blocks:
+      name: "&6Blocks"
+      icon: GOLD_BLOCK
+      items:
+        - material: GOLD_BLOCK
+          amount: 4
+          cost:
+            tokens: 2
+        - material: DIAMOND_BLOCK
+          cost:
+            compressed: 1
+    special:
+      name: "&dSpecial"
+      icon: NETHER_STAR
+      items:
+        - material: NETHER_STAR
+          name: "&dMystery Reward"
+          lore:
+            - "&7Runs a console command."
+          give-item: false
+          cost:
+            money: 5000.0
+          commands:
+            - "say {player} bought a Mystery Reward!"

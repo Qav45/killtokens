@@ -60,7 +60,7 @@ C:\Users\banip\maven\apache-maven-3.9.6\bin\mvn.cmd package
 | `/refined store` | `killtokens.refined` | Moves physical Refined Ore items from inventory into virtual storage. |
 | `/refined withdraw refined <amount>` | `killtokens.refined` | Withdraws stored Refined Ore. |
 | `/refined withdraw compressed <amount>` | `killtokens.refined` | Withdraws stored Compressed Refined Ore. |
-| `/refinedu` | `killtokens.refinedu` | Opens the merged Refined U Shopkeepers GUI. |
+| `/refinedu` | `killtokens.refinedu` | Opens the built-in Refined U shop GUI. |
 
 ## Permissions
 
@@ -131,14 +131,23 @@ refined:
 
 refinedu:
   enabled: true
-  shopkeeper-id: 78
-  open-command: "shopkeeper open {shopId}"
-  dispatch-as-console: false
-  temporary-permissions:
-    - shopkeepers.openbyid
+  title: "&8&lRefined U Shop"
+  sections:
+    gear:
+      name: "&bRefined Gear"
+      icon: DIAMOND_PICKAXE
+      items:
+        - material: DIAMOND_PICKAXE
+          name: "&bRefined Pickaxe"
+          lore:
+            - "&7+50% refined ore find chance"
+          cost:
+            refined: 10
 ```
 
-`/refinedu` dispatches the configured Shopkeepers open command for the merged admin shop. After adding the matching Shopkeepers entry to `plugins/Shopkeepers/save.yml`, leave `shopkeeper-id` at `78` or update it to the numeric ID you actually used.
+## Refined U Shop
+
+`/refinedu` opens a built-in shop GUI. Sections defined under `refinedu.sections` become tabs in the top row; each item in a section is a buy button showing its costs in the lore. Costs can combine `refined`, `compressed`, `tokens`, and `money` (Vault). A purchase can hand over the displayed item, run console `commands` (with a `{player}` placeholder), or both (`give-item: false` for command-only entries). Up to 7 sections and 28 items per section are displayed. No external shop plugin is required.
 
 ## Dupe Protection And Staff Flags
 

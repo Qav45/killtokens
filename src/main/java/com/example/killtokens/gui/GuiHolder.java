@@ -14,23 +14,29 @@ import org.bukkit.inventory.InventoryHolder;
  */
 public final class GuiHolder implements InventoryHolder {
 
-    public enum View { MAIN, AMOUNT }
+    public enum View { MAIN, AMOUNT, SHOP }
 
     private final View view;
     private final AmountGui.Type amountType;
+    private final String shopSection;
     private Inventory inventory;
 
-    private GuiHolder(View view, AmountGui.Type amountType) {
+    private GuiHolder(View view, AmountGui.Type amountType, String shopSection) {
         this.view = view;
         this.amountType = amountType;
+        this.shopSection = shopSection;
     }
 
     public static GuiHolder main() {
-        return new GuiHolder(View.MAIN, null);
+        return new GuiHolder(View.MAIN, null, null);
     }
 
     public static GuiHolder amount(AmountGui.Type type) {
-        return new GuiHolder(View.AMOUNT, type);
+        return new GuiHolder(View.AMOUNT, type, null);
+    }
+
+    public static GuiHolder shop(String sectionId) {
+        return new GuiHolder(View.SHOP, null, sectionId);
     }
 
     public View getView() {
@@ -40,6 +46,11 @@ public final class GuiHolder implements InventoryHolder {
     /** Only set for {@link View#AMOUNT}. */
     public AmountGui.Type getAmountType() {
         return amountType;
+    }
+
+    /** Only set for {@link View#SHOP}. */
+    public String getShopSection() {
+        return shopSection;
     }
 
     @Override
