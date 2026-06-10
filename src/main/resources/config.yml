@@ -7,10 +7,20 @@ cash-amount: 100.0
 # Display name of the physical token item (supports & color codes)
 token-item-name: "&6Kill Token"
 # Title of the central /tokens GUI (supports & color codes)
-gui-title: "&8&lKillTokens Storage"
+gui-title: "&8&lInstellar Storage"
+
+# Dupe / spam protection
+security:
+  # Minimum delay (milliseconds) between economy actions per player.
+  # Also absorbs the duplicate rapid clicks Bedrock clients send through Geyser.
+  action-cooldown-ms: 300
 
 # Refined Ore System
 refined:
+  # Accept pre-1.2 refined items that only carry a display name (no invisible tag).
+  # Name-only matching can be forged with an anvil rename, so set this to false
+  # once players have re-stored their old items.
+  accept-legacy-items: true
   # denominator (1/85 base)
   ore-chance: 85
   # guaranteed after this many misses
@@ -23,3 +33,16 @@ refined:
   skip-silk-touch: true
   refined-item: BLUE_DYE
   compressed-item: DIAMOND_NAUTILUS_ARMOR
+
+# Opens the merged Shopkeepers admin shop created from the Refined Ore shops.
+refinedu:
+  enabled: true
+  shopkeeper-id: 78
+  # Default Shopkeepers syntax. Change this if your installed version uses a different open command.
+  open-command: "shopkeeper open {shopId}"
+  # Set true only if your open-command includes a target, for example:
+  # open-command: "shopkeeper open {shopId} {player}"
+  dispatch-as-console: false
+  # Granted only while /refinedu dispatches the configured Shopkeepers command.
+  temporary-permissions:
+    - shopkeepers.openbyid

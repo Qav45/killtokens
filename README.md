@@ -60,6 +60,7 @@ C:\Users\banip\maven\apache-maven-3.9.6\bin\mvn.cmd package
 | `/refined store` | `killtokens.refined` | Moves physical Refined Ore items from inventory into virtual storage. |
 | `/refined withdraw refined <amount>` | `killtokens.refined` | Withdraws stored Refined Ore. |
 | `/refined withdraw compressed <amount>` | `killtokens.refined` | Withdraws stored Compressed Refined Ore. |
+| `/refinedu` | `killtokens.refinedu` | Opens the merged Refined U Shopkeepers GUI. |
 
 ## Permissions
 
@@ -68,6 +69,7 @@ C:\Users\banip\maven\apache-maven-3.9.6\bin\mvn.cmd package
 | `killtokens.use` | `true` | Allows basic `/tokens` commands and GUI access. |
 | `killtokens.admin` | `op` | Allows admin token set/add/remove commands. |
 | `killtokens.refined` | `true` | Allows `/refined` commands. |
+| `killtokens.refinedu` | `true` | Allows players to open the merged Refined U shop. |
 | `killtokens.refined.admin` | `op` | Reserved for refined ore admin features. |
 | `killtokens.alerts` | `op` | Receives dupe protection flag warnings. |
 
@@ -77,7 +79,18 @@ C:\Users\banip\maven\apache-maven-3.9.6\bin\mvn.cmd package
 
 ![KillTokens UI Preview](docs/gui_preview.png)
 
-All GUI mutation actions are guarded by the dupe protection service so only one storage operation can run for a player at a time.
+All GUI mutation actions are guarded by the dupe protection service: a per-player operation lock plus a configurable action cooldown (`security.action-cooldown-ms`).
+
+GUIs are identified by a custom `InventoryHolder` (`GuiHolder`), not by window title. This is safe with Geyser/Bedrock clients, immune to title collisions with other plugins, and unaffected by config reloads while a GUI is open. Drag events into the GUI are cancelled so items cannot be lost in the menu, and button feedback uses sounds that Geyser maps for Bedrock players.
+
+## Geyser / Bedrock Support
+
+No Geyser extension is required — the GUI is a standard double-chest inventory that Geyser translates natively. Specific accommodations:
+
+- Holder-based GUI detection (Bedrock title rendering differences cannot break click handling).
+- The action cooldown absorbs the duplicate rapid clicks Bedrock clients commonly send.
+- Feedback sounds (`UI_BUTTON_CLICK`, `ENTITY_EXPERIENCE_ORB_PICKUP`, `ENTITY_VILLAGER_NO`) all have Bedrock mappings.
+- Item names carry the key information; lore is supplementary (Bedrock shows lore less prominently).
 
 ## Refined Ore
 
@@ -97,9 +110,16 @@ kill-reward: 1
 cash-tokens: 10
 cash-amount: 100.0
 token-item-name: "&6Kill Token"
-gui-title: "&8&lKillTokens Storage"
+gui-title: "&8&lInstellar Storage"
+
+security:
+  # Minimum delay (ms) between economy actions per player
+  action-cooldown-ms: 300
 
 refined:
+  # Accept old name-only refined items (pre-1.2). Disable once players
+  # have re-stored their old drops; name matching is anvil-forgeable.
+  accept-legacy-items: true
   ore-chance: 85
   ore-pity: 100
   compressed-chance: 3500
@@ -108,7 +128,17 @@ refined:
   skip-silk-touch: true
   refined-item: BLUE_DYE
   compressed-item: DIAMOND_NAUTILUS_ARMOR
+
+refinedu:
+  enabled: true
+  shopkeeper-id: 78
+  open-command: "shopkeeper open {shopId}"
+  dispatch-as-console: false
+  temporary-permissions:
+    - shopkeepers.openbyid
 ```
+
+`/refinedu` dispatches the configured Shopkeepers open command for the merged admin shop. After adding the matching Shopkeepers entry to `plugins/Shopkeepers/save.yml`, leave `shopkeeper-id` at `78` or update it to the numeric ID you actually used.
 
 ## Dupe Protection And Staff Flags
 
@@ -144,6 +174,29 @@ Identifier: `killtokens`
 | `%killtokens_total_virtual_items%` | Kill tokens plus stored refined balances. |
 | `%killtokens_dupe_flags%` | Player dupe flag count. |
 | `%killtokens_last_dupe_flag%` | Last recorded dupe flag summary. |
+
+## Developer API
+
+Other plugins can integrate through `com.example.killtokens.api.KillTokensApi`. Add KillTokens to your `softdepend` and:
+
+```java
+KillTokensApi api = KillTokensApi.get(); // null if KillTokens is disabled
+if (api != null) {
+    api.addTokens(player.getUniqueId(), 5);
+    int refined = api.getRefinedBalance(player.getUniqueId());
+
+    // Plugin items are PDC-tagged (killtokens:item-type), so shops can
+    // verify authenticity instead of trusting display names:
+    ItemStack token = api.createTokenItem(16);
+    boolean real = api.isRefinedItem(someItem);
+}
+```
+
+All API methods must be called from the main server thread.
+
+### Item authenticity
+
+All items issued by the plugin (kill tokens, Refined Ore, Compressed Refined Ore) carry an invisible `PersistentDataContainer` tag. `/refined store` and the GUI verify this tag, so anvil-renamed lookalikes are rejected once `refined.accept-legacy-items` is set to `false`.
 
 ## Storage Files
 

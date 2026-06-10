@@ -1,9 +1,9 @@
 name: KillTokens
-version: 1.1.0
+version: 1.2.0
 main: com.example.killtokens.KillTokensPlugin
 api-version: 1.20
 description: Earn tokens for kills and exchange them for currency.
-softdepend: [Vault, PlaceholderAPI]
+softdepend: [Vault, PlaceholderAPI, Shopkeepers]
 
 commands:
   tokens:
@@ -14,6 +14,10 @@ commands:
     description: Manage your Refined Ore storage.
     usage: /refined <balance|storage|store|withdraw>
     permission: killtokens.refined
+  refinedu:
+    description: Open the merged Refined U Shopkeepers GUI.
+    usage: /refinedu
+    permission: killtokens.refinedu
 
 permissions:
   killtokens.use:
@@ -24,6 +28,9 @@ permissions:
     default: op
   killtokens.refined:
     description: Allows players to use /refined commands.
+    default: true
+  killtokens.refinedu:
+    description: Allows players to open the merged Refined U shop.
     default: true
   killtokens.refined.admin:
     description: Admin overrides for refined ore.

@@ -38,11 +38,13 @@ public class AmountGui {
      * For all other types, {@code max} is the available item balance.
      */
     public void open(Player player, Type type, int max) {
-        Inventory inv = Bukkit.createInventory(null, SIZE, titleFor(type));
+        GuiHolder holder = GuiHolder.amount(type);
+        Inventory inv = Bukkit.createInventory(holder, SIZE, titleFor(type));
+        holder.setInventory(inv);
 
-        ItemStack border = pane(Material.ORANGE_STAINED_GLASS_PANE);
-        ItemStack fill = pane(Material.LIME_STAINED_GLASS_PANE);
-        for (int i = 0; i < SIZE; i++) inv.setItem(i, fill);
+        ItemStack border = pane(Material.BLACK_STAINED_GLASS_PANE);
+        ItemStack filler = pane(Material.GRAY_STAINED_GLASS_PANE);
+        for (int i = 0; i < SIZE; i++) inv.setItem(i, filler);
         for (int i = 0; i < 9; i++) inv.setItem(i, border);
         for (int i = 18; i < 27; i++) inv.setItem(i, border);
         inv.setItem(9, border);
@@ -56,7 +58,7 @@ public class AmountGui {
             inv.setItem(AMOUNT_SLOTS[i], amountButton(type, amt, max, raw == -1));
         }
 
-        inv.setItem(SLOT_BACK, item(Material.ARROW, "&7← Back", "&7Return to the main menu."));
+        inv.setItem(SLOT_BACK, item(Material.ARROW, "&7« Back", "&7Return to the main menu."));
 
         player.openInventory(inv);
     }
@@ -81,7 +83,7 @@ public class AmountGui {
                 int cashTokens = plugin.getConfig().getInt("cash-tokens", 10);
                 double cashAmount = plugin.getConfig().getDouble("cash-amount", 100.0);
                 return item(Material.EMERALD, "&a&lCash Out Tokens",
-                    "&7Rate: &e" + cashTokens + " tokens &7→ &a$" + String.format("%.2f", cashAmount),
+                    "&7Rate: &e" + cashTokens + " tokens &7» &a$" + String.format("%.2f", cashAmount),
                     "&7Cashouts available: &e" + max,
                     "&7Choose how many cashouts to perform.");
             }
@@ -90,8 +92,8 @@ public class AmountGui {
                     "&7Available: &b" + max,
                     "&7Choose how many to withdraw.");
             case COMPRESSED_WITHDRAW:
-                return item(Material.AMETHYST_SHARD, "&b&lWithdraw Compressed",
-                    "&7Available: &b" + max,
+                return item(Material.AMETHYST_SHARD, "&d&lWithdraw Compressed",
+                    "&7Available: &d" + max,
                     "&7Choose how many to withdraw.");
             default:
                 return item(Material.PAPER, "&fSelect Amount", "&7Available: &e" + max);
@@ -102,6 +104,7 @@ public class AmountGui {
         boolean canAfford = amount > 0 && amount <= max;
         Material mat = canAfford ? Material.LIME_CONCRETE : Material.RED_CONCRETE;
 
+        ItemStack button;
         if (type == Type.TOKEN_CASHOUT) {
             int cashTokens = plugin.getConfig().getInt("cash-tokens", 10);
             double cashAmount = plugin.getConfig().getDouble("cash-amount", 100.0);
@@ -109,19 +112,23 @@ public class AmountGui {
                 ? (amount > 0 ? "&6All (&e" + amount + "x&6)" : "&cAll (none)")
                 : "&e" + amount + "x &6Cashout";
             String detail = amount > 0
-                ? "&7Cost: &e" + (amount * cashTokens) + " tokens &7→ &a$" + String.format("%.2f", amount * cashAmount)
+                ? "&7Cost: &e" + (amount * cashTokens) + " tokens &7» &a$" + String.format("%.2f", amount * cashAmount)
                 : "&cNo cashouts available.";
-            return item(mat, label, detail);
+            button = item(mat, label, detail);
+        } else {
+            String typeName = typeName(type);
+            String label = isAll
+                ? (amount > 0 ? "&bAll (&e" + amount + "&b)" : "&cAll (none)")
+                : "&e" + amount + " &b" + typeName;
+            String detail = canAfford
+                ? "&a» Click to withdraw &e" + amount
+                : (amount <= 0 ? "&cNone available." : "&cNot enough (have &e" + max + "&c).");
+            button = item(mat, label, detail);
         }
 
-        String typeName = typeName(type);
-        String label = isAll
-            ? (amount > 0 ? "&bAll (&e" + amount + "&b)" : "&cAll (none)")
-            : "&e" + amount + " &b" + typeName;
-        String detail = canAfford
-            ? "&aClick to withdraw &e" + amount + "&a."
-            : (amount <= 0 ? "&cNone available." : "&cNot enough (have &e" + max + "&c).");
-        return item(mat, label, detail);
+        // Stack size mirrors the amount so the choice reads at a glance
+        button.setAmount(Math.max(1, Math.min(64, amount)));
+        return button;
     }
 
     private String typeName(Type type) {

@@ -16,6 +16,7 @@ public class DupeProtectionService {
 
     private final KillTokensPlugin plugin;
     private final Map<UUID, String> activeOperations = new HashMap<>();
+    private final Map<UUID, Long> lastActionAt = new HashMap<>();
     private final Map<UUID, Integer> flagCounts = new HashMap<>();
     private final Map<UUID, String> lastFlags = new HashMap<>();
 
@@ -23,6 +24,14 @@ public class DupeProtectionService {
         this.plugin = plugin;
     }
 
+    /**
+     * Gates an economy-changing operation. Returns false if another operation is
+     * still active (re-entrancy, e.g. an event fired from inside a transaction) or
+     * if the per-player cooldown has not elapsed. The cooldown is the part that
+     * actually matters in practice: all handlers run on the main thread, so true
+     * overlap is rare, but rapid duplicate clicks (common from Bedrock clients via
+     * Geyser) arrive as distinct sequential events the overlap check cannot see.
+     */
     public synchronized boolean begin(Player player, String operation) {
         UUID uuid = player.getUniqueId();
         String active = activeOperations.get(uuid);
@@ -30,6 +39,15 @@ public class DupeProtectionService {
             flag(player, operation, "Blocked overlapping operation while " + active + " was active");
             return false;
         }
+
+        long cooldownMs = plugin.getConfig().getLong("security.action-cooldown-ms", 300L);
+        long now = System.currentTimeMillis();
+        Long last = lastActionAt.get(uuid);
+        if (last != null && now - last < cooldownMs) {
+            return false;
+        }
+
+        lastActionAt.put(uuid, now);
         activeOperations.put(uuid, operation);
         return true;
     }

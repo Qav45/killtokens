@@ -1,6 +1,8 @@
 package com.example.killtokens;
 
+import com.example.killtokens.api.KillTokensApi;
 import com.example.killtokens.commands.RefinedCommand;
+import com.example.killtokens.commands.RefinedUCommand;
 import com.example.killtokens.commands.TokensCommand;
 import com.example.killtokens.gui.AmountGui;
 import com.example.killtokens.gui.GuiListener;
@@ -14,6 +16,7 @@ import com.example.killtokens.security.DupeProtectionService;
 import com.example.killtokens.storage.TokenStorage;
 import com.example.killtokens.storage.YamlTokenStorage;
 import net.milkbowl.vault.economy.Economy;
+import org.bukkit.Material;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -31,6 +34,7 @@ public class KillTokensPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        validateConfiguredMaterials();
         storage = new YamlTokenStorage(getDataFolder(), getLogger());
         refinedStorage = new YamlRefinedOreStorage(getDataFolder(), getLogger());
         dupeProtection = new DupeProtectionService(this);
@@ -56,13 +60,20 @@ public class KillTokensPlugin extends JavaPlugin {
         getCommand("refined").setExecutor(refinedCommand);
         getCommand("refined").setTabCompleter(refinedCommand);
 
+        getCommand("refinedu").setExecutor(new RefinedUCommand(this));
+
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new RefinedPAPIExpansion(this).register();
             getLogger().info("PlaceholderAPI found - placeholders registered.");
         }
 
-        // Flush both storages every 5 minutes to prevent data loss on crash
-        getServer().getScheduler().runTaskTimerAsynchronously(this,
+        KillTokensApi.register(this);
+
+        // Flush both storages every 5 minutes to prevent data loss on crash.
+        // Runs on the main thread: YamlConfiguration is not thread-safe, and an
+        // async save racing main-thread writes can corrupt the file or throw
+        // ConcurrentModificationException. The files are tiny, so a sync save is fine.
+        getServer().getScheduler().runTaskTimer(this,
             () -> {
                 try {
                     storage.flush();
@@ -80,6 +91,7 @@ public class KillTokensPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        KillTokensApi.unregister();
         if (storage != null) {
             storage.flush();
         }
@@ -110,6 +122,16 @@ public class KillTokensPlugin extends JavaPlugin {
 
     public DupeProtectionService getDupeProtection() {
         return dupeProtection;
+    }
+
+    private void validateConfiguredMaterials() {
+        for (String path : new String[]{"refined.refined-item", "refined.compressed-item"}) {
+            String configured = getConfig().getString(path);
+            if (configured != null && Material.matchMaterial(configured) == null) {
+                getLogger().warning("Config '" + path + "' = '" + configured
+                    + "' is not a valid material on this server version; using the built-in fallback.");
+            }
+        }
     }
 
     private boolean hookVault() {

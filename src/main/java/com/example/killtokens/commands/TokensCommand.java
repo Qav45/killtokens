@@ -2,10 +2,10 @@ package com.example.killtokens.commands;
 
 import com.example.killtokens.KillTokensPlugin;
 import com.example.killtokens.util.MessageUtil;
+import com.example.killtokens.util.TokenItemFactory;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -13,7 +13,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,26 +31,28 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        String sub = args.length == 0 ? "gui" : args[0].toLowerCase();
+
+        // Admin subcommands work from console too
+        switch (sub) {
+            case "set":
+            case "add":
+            case "remove":
+                return handleAdmin(sender, sub, args);
+        }
+
         if (!(sender instanceof Player)) {
-            sender.sendMessage("This command can only be used by players.");
+            sender.sendMessage("This command can only be used by players (console may use set/add/remove).");
             return true;
         }
 
         Player player = (Player) sender;
 
-        if (args.length == 0) {
-            plugin.getTokensGui().open(player);
-            return true;
-        }
-
-        switch (args[0].toLowerCase()) {
+        switch (sub) {
             case "gui":      plugin.getTokensGui().open(player); return true;
             case "balance":  return handleBalance(player);
             case "withdraw": return handleWithdraw(player, args);
             case "cashout":  return handleCashout(player);
-            case "set":      return handleSet(player, args);
-            case "add":      return handleAdd(player, args);
-            case "remove":   return handleRemove(player, args);
             default:
                 sendUsage(player);
                 return true;
@@ -60,8 +61,8 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
 
     private boolean handleBalance(Player player) {
         int tokens = plugin.getStorage().getTokens(player.getUniqueId());
-        int cashTokens = plugin.getConfig().getInt("cash-tokens");
-        double cashAmount = plugin.getConfig().getDouble("cash-amount");
+        int cashTokens = plugin.getConfig().getInt("cash-tokens", 10);
+        double cashAmount = plugin.getConfig().getDouble("cash-amount", 100.0);
 
         player.sendMessage(MessageUtil.color("&8&l===================="));
         player.sendMessage(MessageUtil.color("&6&l  KillTokens Balance"));
@@ -97,21 +98,11 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
 
-            String itemName = plugin.getConfig().getString("token-item-name", "&6Kill Token");
-            ItemStack tokenItem = new ItemStack(Material.GOLD_NUGGET, amount);
-            ItemMeta meta = tokenItem.getItemMeta();
-            meta.setDisplayName(MessageUtil.color(itemName));
-            meta.setLore(Arrays.asList(
-                MessageUtil.color("&7Earned through honorable combat"),
-                MessageUtil.color("&7Use &e/tokens cashout &7to exchange for money")
-            ));
-            tokenItem.setItemMeta(meta);
-
             // Deduct before giving to prevent dupe on crash
             plugin.getStorage().setTokens(player.getUniqueId(), balance - amount);
             plugin.getStorage().flush();
 
-            Map<Integer, ItemStack> leftover = player.getInventory().addItem(tokenItem);
+            Map<Integer, ItemStack> leftover = player.getInventory().addItem(TokenItemFactory.make(plugin, amount));
             if (!leftover.isEmpty()) {
                 plugin.getDupeProtection().flag(player, "tokens-withdraw", "Inventory overflow while withdrawing tokens");
                 leftover.values().forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
@@ -138,8 +129,8 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         }
 
         try {
-            int cashTokens = plugin.getConfig().getInt("cash-tokens");
-            double cashAmount = plugin.getConfig().getDouble("cash-amount");
+            int cashTokens = plugin.getConfig().getInt("cash-tokens", 10);
+            double cashAmount = plugin.getConfig().getDouble("cash-amount", 100.0);
             int balance = plugin.getStorage().getTokens(player.getUniqueId());
 
             if (balance < cashTokens) {
@@ -167,97 +158,47 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private boolean handleSet(Player player, String[] args) {
-        if (!player.hasPermission("killtokens.admin")) {
-            player.sendMessage(MessageUtil.color("&cYou don't have permission to use this command."));
+    private boolean handleAdmin(CommandSender sender, String sub, String[] args) {
+        if (!sender.hasPermission("killtokens.admin")) {
+            sender.sendMessage(MessageUtil.color("&cYou don't have permission to use this command."));
             return true;
         }
         if (args.length < 3) {
-            player.sendMessage(MessageUtil.color("&cUsage: /tokens set <player> <amount>"));
+            sender.sendMessage(MessageUtil.color("&cUsage: /tokens " + sub + " <player> <amount>"));
             return true;
         }
 
-        int amount = parseNonNegativeInt(player, args[2]);
+        int amount = sub.equals("set")
+            ? parseNonNegativeInt(sender, args[2])
+            : parsePositiveInt(sender, args[2]);
         if (amount < 0) return true;
 
-        if (!plugin.getDupeProtection().begin(player, "tokens-admin-set")) {
-            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
-            return true;
-        }
-        try {
         OfflinePlayer target = resolveOfflinePlayer(args[1]);
-        plugin.getStorage().setTokens(target.getUniqueId(), amount);
+        switch (sub) {
+            case "set":
+                plugin.getStorage().setTokens(target.getUniqueId(), amount);
+                sender.sendMessage(MessageUtil.color("&aSet &e" + args[1] + "&a's tokens to &e" + amount + "&a."));
+                break;
+            case "add":
+                plugin.getStorage().addTokens(target.getUniqueId(), amount);
+                sender.sendMessage(MessageUtil.color("&aAdded &e" + amount + " &atokens to &e" + args[1] + "&a."));
+                break;
+            case "remove":
+                int current = plugin.getStorage().getTokens(target.getUniqueId());
+                plugin.getStorage().setTokens(target.getUniqueId(), Math.max(0, current - amount));
+                sender.sendMessage(MessageUtil.color("&aRemoved &e" + amount + " &atokens from &e" + args[1] + "&a."));
+                break;
+        }
         plugin.getStorage().flush();
-        player.sendMessage(MessageUtil.color("&aSet &e" + args[1] + "&a's tokens to &e" + amount + "&a."));
         return true;
-        } finally {
-            plugin.getDupeProtection().end(player.getUniqueId());
-        }
-    }
-
-    private boolean handleAdd(Player player, String[] args) {
-        if (!player.hasPermission("killtokens.admin")) {
-            player.sendMessage(MessageUtil.color("&cYou don't have permission to use this command."));
-            return true;
-        }
-        if (args.length < 3) {
-            player.sendMessage(MessageUtil.color("&cUsage: /tokens add <player> <amount>"));
-            return true;
-        }
-
-        int amount = parsePositiveInt(player, args[2]);
-        if (amount < 0) return true;
-
-        if (!plugin.getDupeProtection().begin(player, "tokens-admin-add")) {
-            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
-            return true;
-        }
-        try {
-        OfflinePlayer target = resolveOfflinePlayer(args[1]);
-        plugin.getStorage().addTokens(target.getUniqueId(), amount);
-        plugin.getStorage().flush();
-        player.sendMessage(MessageUtil.color("&aAdded &e" + amount + " &atokens to &e" + args[1] + "&a."));
-        return true;
-        } finally {
-            plugin.getDupeProtection().end(player.getUniqueId());
-        }
-    }
-
-    private boolean handleRemove(Player player, String[] args) {
-        if (!player.hasPermission("killtokens.admin")) {
-            player.sendMessage(MessageUtil.color("&cYou don't have permission to use this command."));
-            return true;
-        }
-        if (args.length < 3) {
-            player.sendMessage(MessageUtil.color("&cUsage: /tokens remove <player> <amount>"));
-            return true;
-        }
-
-        int amount = parsePositiveInt(player, args[2]);
-        if (amount < 0) return true;
-
-        if (!plugin.getDupeProtection().begin(player, "tokens-admin-remove")) {
-            player.sendMessage(MessageUtil.color("&cPlease wait before performing another action."));
-            return true;
-        }
-        try {
-        OfflinePlayer target = resolveOfflinePlayer(args[1]);
-        int current = plugin.getStorage().getTokens(target.getUniqueId());
-        plugin.getStorage().setTokens(target.getUniqueId(), Math.max(0, current - amount));
-        plugin.getStorage().flush();
-        player.sendMessage(MessageUtil.color("&aRemoved &e" + amount + " &atokens from &e" + args[1] + "&a."));
-        return true;
-        } finally {
-            plugin.getDupeProtection().end(player.getUniqueId());
-        }
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (!(sender instanceof Player)) return Collections.emptyList();
-
         if (args.length == 1) {
-            List<String> subs = new ArrayList<>(Arrays.asList("gui", "balance", "withdraw", "cashout"));
+            List<String> subs = sender instanceof Player
+                ? new ArrayList<>(Arrays.asList("gui", "balance", "withdraw", "cashout"))
+                : new ArrayList<>();
             if (sender.hasPermission("killtokens.admin")) {
                 subs.addAll(Arrays.asList("set", "add", "remove"));
             }
@@ -279,25 +220,25 @@ public class TokensCommand implements CommandExecutor, TabCompleter {
         return Collections.emptyList();
     }
 
-    private static int parsePositiveInt(Player player, String arg) {
-        int amount = parseNonNegativeInt(player, arg);
+    private static int parsePositiveInt(CommandSender sender, String arg) {
+        int amount = parseNonNegativeInt(sender, arg);
         if (amount == 0) {
-            player.sendMessage(MessageUtil.color("&cAmount must be a positive number."));
+            sender.sendMessage(MessageUtil.color("&cAmount must be a positive number."));
             return -1;
         }
         return amount;
     }
 
-    private static int parseNonNegativeInt(Player player, String arg) {
+    private static int parseNonNegativeInt(CommandSender sender, String arg) {
         int amount;
         try {
             amount = Integer.parseInt(arg);
         } catch (NumberFormatException e) {
-            player.sendMessage(MessageUtil.color("&cInvalid amount. Please enter a whole number."));
+            sender.sendMessage(MessageUtil.color("&cInvalid amount. Please enter a whole number."));
             return -1;
         }
         if (amount < 0) {
-            player.sendMessage(MessageUtil.color("&cAmount cannot be negative."));
+            sender.sendMessage(MessageUtil.color("&cAmount cannot be negative."));
             return -1;
         }
         return amount;
