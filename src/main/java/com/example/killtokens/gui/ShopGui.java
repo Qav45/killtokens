@@ -76,6 +76,16 @@ public class ShopGui {
         return (index >= 0 && index < count) ? index : -1;
     }
 
+    /**
+     * Enchantment used purely for the glint effect, resolved by key at runtime.
+     * Field constants like Enchantment.LUCK were renamed across API versions, so
+     * referencing them directly can throw NoSuchFieldError on newer servers.
+     */
+    static Enchantment glowEnchantment() {
+        Enchantment glow = Enchantment.getByKey(NamespacedKey.minecraft("luck_of_the_sea"));
+        return glow != null ? glow : Enchantment.getByKey(NamespacedKey.minecraft("unbreaking"));
+    }
+
     public void open(Player player, String sectionId) {
         List<String> sections = sectionIds();
         if (sections.isEmpty()) {
@@ -142,8 +152,11 @@ public class ShopGui {
         meta.setLore(Collections.singletonList(MessageUtil.color(
             selected ? "&aCurrently viewing." : "&e» Click to view")));
         if (selected) {
-            meta.addEnchant(Enchantment.LUCK, 1, true);
-            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            Enchantment glow = glowEnchantment();
+            if (glow != null) {
+                meta.addEnchant(glow, 1, true);
+                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+            }
         }
         item.setItemMeta(meta);
         return item;
@@ -342,8 +355,11 @@ public class ShopGui {
                 meta.setUnbreakable(true);
             }
             if (glow && enchantments.isEmpty()) {
-                meta.addEnchant(Enchantment.LUCK, 1, true);
-                meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                Enchantment glowEnch = glowEnchantment();
+                if (glowEnch != null) {
+                    meta.addEnchant(glowEnch, 1, true);
+                    meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+                }
             }
             item.setItemMeta(meta);
             return item;
